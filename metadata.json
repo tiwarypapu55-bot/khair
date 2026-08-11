@@ -1,0 +1,6 @@
+{
+  "name": "Khair Hospital",
+  "description": "Official portal and admin portal for Khair Hospital featuring Departments, Facilities, Doctor Directory, Emergency & Appointments, Gallery, Notices, Events, and Admin Management System.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
