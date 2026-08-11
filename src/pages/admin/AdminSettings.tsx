@@ -1027,7 +1027,7 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
                       setEditingSlideId(null);
                       setSlideForm({
                         ...initialSlideState,
-                        title: `HERO BANNER #${slotNumber}`
+                        title: 'KHAIR HOSPITAL'
                       });
                       setLeftListText(initialSlideState.leftList?.join('\n') || '');
                       setRightListText(initialSlideState.rightList?.join('\n') || '');

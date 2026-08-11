@@ -200,23 +200,31 @@ export const HeroSlider: React.FC = () => {
                   </div>
 
                   {/* Headline */}
-                  <div>
-                    <h1 className={`text-2xl sm:text-4xl font-serif font-extrabold tracking-tight leading-tight ${
-                      isLightBg ? 'text-slate-950' : 'text-white'
-                    }`}>
-                      {current.title}
-                    </h1>
-                    {current.highlightText && (
-                      <p className={`text-lg sm:text-xl font-black mt-1 flex items-center gap-2 ${
-                        isLightBg ? 'text-amber-950' : 'text-amber-300'
-                      }`}>
-                        <span className={`w-2 h-2 rounded-full animate-ping inline-block ${
-                          isLightBg ? 'bg-amber-950' : 'bg-amber-300'
-                        }`} />
-                        <span>{current.highlightText}</span>
-                      </p>
-                    )}
-                  </div>
+                  {(() => {
+                    const displayTitle = current.title ? current.title.replace(/HERO\s+BANNER\s*#?\d*/gi, '').trim() : '';
+                    if (!displayTitle && !current.highlightText) return null;
+                    return (
+                      <div>
+                        {displayTitle ? (
+                          <h1 className={`text-2xl sm:text-4xl font-serif font-extrabold tracking-tight leading-tight ${
+                            isLightBg ? 'text-slate-950' : 'text-white'
+                          }`}>
+                            {displayTitle}
+                          </h1>
+                        ) : null}
+                        {current.highlightText && (
+                          <p className={`text-lg sm:text-xl font-black mt-1 flex items-center gap-2 ${
+                            isLightBg ? 'text-amber-950' : 'text-amber-300'
+                          }`}>
+                            <span className={`w-2 h-2 rounded-full animate-ping inline-block ${
+                              isLightBg ? 'bg-amber-950' : 'bg-amber-300'
+                            }`} />
+                            <span>{current.highlightText}</span>
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Hindi Slogan if available */}
                   {current.hindiSlogan && (
