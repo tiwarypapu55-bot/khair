@@ -677,8 +677,8 @@ export const EmployeePortal: React.FC = () => {
       {/* 7. Walk-in OPD Appointment Modal */}
       {isAddWalkInOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="bg-emerald-900 text-white p-5 flex items-center justify-between">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+            <div className="bg-emerald-900 text-white p-5 flex items-center justify-between shrink-0">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-300">
                   Staff OPD Desk
@@ -687,13 +687,13 @@ export const EmployeePortal: React.FC = () => {
               </div>
               <button
                 onClick={() => setIsAddWalkInOpen(false)}
-                className="text-emerald-200 hover:text-white bg-emerald-950 p-1 rounded-full"
+                className="text-emerald-200 hover:text-white bg-emerald-950 p-1 rounded-full cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleAddWalkIn} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleAddWalkIn} className="p-6 space-y-4 text-xs overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 uppercase mb-1">Patient Name *</label>

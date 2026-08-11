@@ -100,6 +100,11 @@ interface HospitalContextType {
   setCurrentTab: (tab: string) => void;
   isAdminMode: boolean;
   setIsAdminMode: (admin: boolean) => void;
+  isAdminAuthenticated: boolean;
+  isAdminLoginModalOpen: boolean;
+  setIsAdminLoginModalOpen: (open: boolean) => void;
+  adminLogin: (id: string, pass: string) => boolean;
+  adminLogout: () => void;
   adminTab: AdminTabType;
   setAdminTab: (tab: AdminTabType) => void;
   selectedDoctorForBooking: Doctor | null;
@@ -204,7 +209,43 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [currentTab, setCurrentTab] = useState<string>('home');
-  const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
+    return sessionStorage.getItem('khair_admin_auth') === 'true';
+  });
+  const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState<boolean>(false);
+  const [isAdminModeState, setIsAdminModeState] = useState<boolean>(() => {
+    return sessionStorage.getItem('khair_admin_auth') === 'true';
+  });
+
+  const setIsAdminMode = (admin: boolean) => {
+    if (admin) {
+      if (sessionStorage.getItem('khair_admin_auth') === 'true' || isAdminAuthenticated) {
+        setIsAdminModeState(true);
+      } else {
+        setIsAdminLoginModalOpen(true);
+      }
+    } else {
+      setIsAdminModeState(false);
+    }
+  };
+
+  const adminLogin = (id: string, pass: string): boolean => {
+    if (id.trim() === 'admin' && pass === 'Khair123@') {
+      setIsAdminAuthenticated(true);
+      setIsAdminModeState(true);
+      setIsAdminLoginModalOpen(false);
+      sessionStorage.setItem('khair_admin_auth', 'true');
+      return true;
+    }
+    return false;
+  };
+
+  const adminLogout = () => {
+    setIsAdminAuthenticated(false);
+    setIsAdminModeState(false);
+    sessionStorage.removeItem('khair_admin_auth');
+  };
+
   const [adminTab, setAdminTab] = useState<AdminTabType>('home');
 
   const [selectedDoctorForBooking, setSelectedDoctorForBooking] = useState<Doctor | null>(null);
@@ -221,95 +262,133 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Initial Sync from Supabase
   useEffect(() => {
     async function initSupabaseData() {
+      let isConnected = false;
+
       // 1. Doctors
       const supabaseDocs = await fetchDoctorsFromSupabase();
-      if (supabaseDocs && supabaseDocs.length > 0) {
-        setDoctors(supabaseDocs);
-        setIsSupabaseConnected(true);
-      } else if (supabaseDocs && supabaseDocs.length === 0) {
-        // Seed initial doctors
-        setIsSupabaseConnected(true);
-        for (const d of INITIAL_DOCTORS) {
-          await saveDoctorToSupabase(d);
+      if (supabaseDocs !== null) {
+        isConnected = true;
+        if (supabaseDocs.length > 0) {
+          setDoctors(supabaseDocs);
+        } else {
+          for (const d of INITIAL_DOCTORS) {
+            await saveDoctorToSupabase(d);
+          }
         }
       }
 
       // 2. Employees
       const supabaseEmps = await fetchEmployeesFromSupabase();
-      if (supabaseEmps && supabaseEmps.length > 0) {
-        setEmployees(supabaseEmps);
-      } else if (supabaseEmps && supabaseEmps.length === 0) {
-        for (const e of INITIAL_EMPLOYEES) {
-          await saveEmployeeToSupabase(e);
+      if (supabaseEmps !== null) {
+        isConnected = true;
+        if (supabaseEmps.length > 0) {
+          setEmployees(supabaseEmps);
+        } else {
+          for (const e of INITIAL_EMPLOYEES) {
+            await saveEmployeeToSupabase(e);
+          }
         }
       }
 
       // 3. Notices
       const supabaseNotices = await fetchNoticesFromSupabase();
-      if (supabaseNotices && supabaseNotices.length > 0) {
-        setNotices(supabaseNotices);
-      } else if (supabaseNotices && supabaseNotices.length === 0) {
-        for (const n of INITIAL_NOTICES) {
-          await saveNoticeToSupabase(n);
+      if (supabaseNotices !== null) {
+        isConnected = true;
+        if (supabaseNotices.length > 0) {
+          setNotices(supabaseNotices);
+        } else {
+          for (const n of INITIAL_NOTICES) {
+            await saveNoticeToSupabase(n);
+          }
         }
       }
 
       // 4. Events
       const supabaseEvents = await fetchEventsFromSupabase();
-      if (supabaseEvents && supabaseEvents.length > 0) {
-        setEvents(supabaseEvents);
-      } else if (supabaseEvents && supabaseEvents.length === 0) {
-        for (const evt of INITIAL_EVENTS) {
-          await saveEventToSupabase(evt);
+      if (supabaseEvents !== null) {
+        isConnected = true;
+        if (supabaseEvents.length > 0) {
+          setEvents(supabaseEvents);
+        } else {
+          for (const evt of INITIAL_EVENTS) {
+            await saveEventToSupabase(evt);
+          }
         }
       }
 
       // 5. Gallery
       const supabaseGallery = await fetchGalleryFromSupabase();
-      if (supabaseGallery && supabaseGallery.length > 0) {
-        setGallery(supabaseGallery);
-      } else if (supabaseGallery && supabaseGallery.length === 0) {
-        for (const g of INITIAL_GALLERY) {
-          await saveGalleryItemToSupabase(g);
+      if (supabaseGallery !== null) {
+        isConnected = true;
+        if (supabaseGallery.length > 0) {
+          setGallery(supabaseGallery);
+        } else {
+          for (const g of INITIAL_GALLERY) {
+            await saveGalleryItemToSupabase(g);
+          }
         }
       }
 
       // 6. Feedbacks
       const supabaseFeedbacks = await fetchFeedbacksFromSupabase();
-      if (supabaseFeedbacks && supabaseFeedbacks.length > 0) {
-        setFeedbacks(supabaseFeedbacks);
-      } else if (supabaseFeedbacks && supabaseFeedbacks.length === 0) {
-        for (const fb of INITIAL_FEEDBACK) {
-          await saveFeedbackToSupabase(fb);
+      if (supabaseFeedbacks !== null) {
+        isConnected = true;
+        if (supabaseFeedbacks.length > 0) {
+          setFeedbacks(supabaseFeedbacks);
+        } else {
+          for (const fb of INITIAL_FEEDBACK) {
+            await saveFeedbackToSupabase(fb);
+          }
         }
       }
 
       // 7. Appointments
       const supabaseApps = await fetchAppointmentsFromSupabase();
-      if (supabaseApps && supabaseApps.length > 0) {
-        setAppointments(supabaseApps);
-      } else if (supabaseApps && supabaseApps.length === 0) {
-        for (const app of INITIAL_APPOINTMENTS) {
-          await saveAppointmentToSupabase(app);
+      if (supabaseApps !== null) {
+        isConnected = true;
+        if (supabaseApps.length > 0) {
+          setAppointments(supabaseApps);
+        } else {
+          for (const app of INITIAL_APPOINTMENTS) {
+            await saveAppointmentToSupabase(app);
+          }
         }
       }
 
       // 8. Settings
       const sbBiz = await fetchSettingFromSupabase<BusinessSettings>('business_settings');
-      if (sbBiz) setBusinessSettings(sbBiz);
-      else await saveSettingToSupabase('business_settings', INITIAL_BUSINESS_SETTINGS);
+      if (sbBiz) {
+        setBusinessSettings(sbBiz);
+        isConnected = true;
+      } else {
+        await saveSettingToSupabase('business_settings', INITIAL_BUSINESS_SETTINGS);
+      }
 
       const sbLogo = await fetchSettingFromSupabase<LogoSettings>('logo_settings');
-      if (sbLogo) setLogoSettings(sbLogo);
-      else await saveSettingToSupabase('logo_settings', INITIAL_LOGO_SETTINGS);
+      if (sbLogo) {
+        setLogoSettings(sbLogo);
+        isConnected = true;
+      } else {
+        await saveSettingToSupabase('logo_settings', INITIAL_LOGO_SETTINGS);
+      }
 
       const sbSliders = await fetchSettingFromSupabase<SliderSetting[]>('slider_settings');
-      if (sbSliders) setSliderSettings(sbSliders);
-      else await saveSettingToSupabase('slider_settings', INITIAL_SLIDER_SETTINGS);
+      if (sbSliders) {
+        setSliderSettings(sbSliders);
+        isConnected = true;
+      } else {
+        await saveSettingToSupabase('slider_settings', INITIAL_SLIDER_SETTINGS);
+      }
 
       const sbFlash = await fetchSettingFromSupabase<FlashAnnouncement>('flash_announcement');
-      if (sbFlash) setFlashAnnouncement(sbFlash);
-      else await saveSettingToSupabase('flash_announcement', INITIAL_FLASH_ANNOUNCEMENT);
+      if (sbFlash) {
+        setFlashAnnouncement(sbFlash);
+        isConnected = true;
+      } else {
+        await saveSettingToSupabase('flash_announcement', INITIAL_FLASH_ANNOUNCEMENT);
+      }
+
+      setIsSupabaseConnected(isConnected);
     }
 
     initSupabaseData();
@@ -733,7 +812,8 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isEmployeeModalOpen, setIsEmployeeModalOpen,
         isEmployeePortalOpen, setIsEmployeePortalOpen,
         currentTab, setCurrentTab,
-        isAdminMode, setIsAdminMode,
+        isAdminMode: isAdminModeState, setIsAdminMode,
+        isAdminAuthenticated, isAdminLoginModalOpen, setIsAdminLoginModalOpen, adminLogin, adminLogout,
         adminTab, setAdminTab,
         selectedDoctorForBooking, setSelectedDoctorForBooking,
         isAppointmentModalOpen, setIsAppointmentModalOpen

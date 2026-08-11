@@ -78,6 +78,7 @@ export interface Notice {
   isPinned: boolean;
   priority: NoticePriority;
   targetAudience: string;
+  docUrl?: string;
 }
 
 export type EventStatus = 'Upcoming' | 'Ongoing' | 'Completed';

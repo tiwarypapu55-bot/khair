@@ -35,8 +35,8 @@ export const HomePage: React.FC = () => {
       phone: feedbackForm.phone,
       email: feedbackForm.email || 'N/A',
       rating: 5,
-      category: feedbackForm.subject || 'General Feedback',
-      comment: feedbackForm.message
+      department: feedbackForm.subject || 'General OPD',
+      message: feedbackForm.message
     });
 
     setFeedbackSubmitted(true);

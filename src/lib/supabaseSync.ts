@@ -10,7 +10,11 @@ import {
 export async function fetchDoctorsFromSupabase(): Promise<Doctor[] | null> {
   try {
     const { data, error } = await supabase.from('doctors').select('*').order('created_at', { ascending: true });
-    if (error || !data) return null;
+    if (error) {
+      console.warn('Supabase fetch doctors error:', error.message || error);
+      return null;
+    }
+    if (!data) return null;
     return data.map((d: any) => ({
       id: d.id,
       name: d.name,
@@ -27,14 +31,14 @@ export async function fetchDoctorsFromSupabase(): Promise<Doctor[] | null> {
       roomNo: d.room_no || ''
     }));
   } catch (err) {
-    console.warn('Supabase fetch doctors error:', err);
+    console.warn('Supabase fetch doctors exception:', err);
     return null;
   }
 }
 
-export async function saveDoctorToSupabase(doc: Doctor): Promise<void> {
+export async function saveDoctorToSupabase(doc: Doctor): Promise<boolean> {
   try {
-    await supabase.from('doctors').upsert({
+    const { error } = await supabase.from('doctors').upsert({
       id: doc.id,
       name: doc.name,
       qualification: doc.qualification,
@@ -49,16 +53,28 @@ export async function saveDoctorToSupabase(doc: Doctor): Promise<void> {
       bio: doc.bio,
       room_no: doc.roomNo
     });
+    if (error) {
+      console.error('Supabase save doctor error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase save doctor error:', err);
+    console.error('Supabase save doctor exception:', err);
+    return false;
   }
 }
 
-export async function deleteDoctorFromSupabase(id: string): Promise<void> {
+export async function deleteDoctorFromSupabase(id: string): Promise<boolean> {
   try {
-    await supabase.from('doctors').delete().eq('id', id);
+    const { error } = await supabase.from('doctors').delete().eq('id', id);
+    if (error) {
+      console.error('Supabase delete doctor error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase delete doctor error:', err);
+    console.error('Supabase delete doctor exception:', err);
+    return false;
   }
 }
 
@@ -68,7 +84,11 @@ export async function deleteDoctorFromSupabase(id: string): Promise<void> {
 export async function fetchEmployeesFromSupabase(): Promise<Employee[] | null> {
   try {
     const { data, error } = await supabase.from('employees').select('*').order('created_at', { ascending: true });
-    if (error || !data) return null;
+    if (error) {
+      console.warn('Supabase fetch employees error:', error.message || error);
+      return null;
+    }
+    if (!data) return null;
     return data.map((e: any) => ({
       id: e.id,
       employeeId: e.employee_id || '',
@@ -83,14 +103,14 @@ export async function fetchEmployeesFromSupabase(): Promise<Employee[] | null> {
       password: e.password || ''
     }));
   } catch (err) {
-    console.warn('Supabase fetch employees error:', err);
+    console.warn('Supabase fetch employees exception:', err);
     return null;
   }
 }
 
-export async function saveEmployeeToSupabase(emp: Employee): Promise<void> {
+export async function saveEmployeeToSupabase(emp: Employee): Promise<boolean> {
   try {
-    await supabase.from('employees').upsert({
+    const { error } = await supabase.from('employees').upsert({
       id: emp.id,
       employee_id: emp.employeeId,
       name: emp.name,
@@ -103,16 +123,28 @@ export async function saveEmployeeToSupabase(emp: Employee): Promise<void> {
       status: emp.status,
       password: emp.password
     });
+    if (error) {
+      console.error('Supabase save employee error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase save employee error:', err);
+    console.error('Supabase save employee exception:', err);
+    return false;
   }
 }
 
-export async function deleteEmployeeFromSupabase(id: string): Promise<void> {
+export async function deleteEmployeeFromSupabase(id: string): Promise<boolean> {
   try {
-    await supabase.from('employees').delete().eq('id', id);
+    const { error } = await supabase.from('employees').delete().eq('id', id);
+    if (error) {
+      console.error('Supabase delete employee error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase delete employee error:', err);
+    console.error('Supabase delete employee exception:', err);
+    return false;
   }
 }
 
@@ -122,7 +154,11 @@ export async function deleteEmployeeFromSupabase(id: string): Promise<void> {
 export async function fetchNoticesFromSupabase(): Promise<Notice[] | null> {
   try {
     const { data, error } = await supabase.from('notices').select('*').order('created_at', { ascending: false });
-    if (error || !data) return null;
+    if (error) {
+      console.warn('Supabase fetch notices error:', error.message || error);
+      return null;
+    }
+    if (!data) return null;
     return data.map((n: any) => ({
       id: n.id,
       title: n.title,
@@ -131,17 +167,18 @@ export async function fetchNoticesFromSupabase(): Promise<Notice[] | null> {
       content: n.content || '',
       isPinned: Boolean(n.is_pinned),
       priority: n.priority || 'Normal',
-      targetAudience: n.target_audience || 'All Patients & Visitors'
+      targetAudience: n.target_audience || 'All Patients & Visitors',
+      docUrl: n.doc_url || ''
     }));
   } catch (err) {
-    console.warn('Supabase fetch notices error:', err);
+    console.warn('Supabase fetch notices exception:', err);
     return null;
   }
 }
 
-export async function saveNoticeToSupabase(notice: Notice): Promise<void> {
+export async function saveNoticeToSupabase(notice: Notice): Promise<boolean> {
   try {
-    await supabase.from('notices').upsert({
+    const { error } = await supabase.from('notices').upsert({
       id: notice.id,
       title: notice.title,
       category: notice.category,
@@ -149,18 +186,31 @@ export async function saveNoticeToSupabase(notice: Notice): Promise<void> {
       content: notice.content,
       is_pinned: notice.isPinned,
       priority: notice.priority,
-      target_audience: notice.targetAudience
+      target_audience: notice.targetAudience,
+      doc_url: notice.docUrl || ''
     });
+    if (error) {
+      console.error('Supabase save notice error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase save notice error:', err);
+    console.error('Supabase save notice exception:', err);
+    return false;
   }
 }
 
-export async function deleteNoticeFromSupabase(id: string): Promise<void> {
+export async function deleteNoticeFromSupabase(id: string): Promise<boolean> {
   try {
-    await supabase.from('notices').delete().eq('id', id);
+    const { error } = await supabase.from('notices').delete().eq('id', id);
+    if (error) {
+      console.error('Supabase delete notice error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase delete notice error:', err);
+    console.error('Supabase delete notice exception:', err);
+    return false;
   }
 }
 
@@ -170,7 +220,11 @@ export async function deleteNoticeFromSupabase(id: string): Promise<void> {
 export async function fetchEventsFromSupabase(): Promise<EventItem[] | null> {
   try {
     const { data, error } = await supabase.from('events').select('*').order('created_at', { ascending: false });
-    if (error || !data) return null;
+    if (error) {
+      console.warn('Supabase fetch events error:', error.message || error);
+      return null;
+    }
+    if (!data) return null;
     return data.map((e: any) => ({
       id: e.id,
       title: e.title,
@@ -184,14 +238,14 @@ export async function fetchEventsFromSupabase(): Promise<EventItem[] | null> {
       imageUrl: e.image_url || ''
     }));
   } catch (err) {
-    console.warn('Supabase fetch events error:', err);
+    console.warn('Supabase fetch events exception:', err);
     return null;
   }
 }
 
-export async function saveEventToSupabase(event: EventItem): Promise<void> {
+export async function saveEventToSupabase(event: EventItem): Promise<boolean> {
   try {
-    await supabase.from('events').upsert({
+    const { error } = await supabase.from('events').upsert({
       id: event.id,
       title: event.title,
       date: event.date,
@@ -203,16 +257,28 @@ export async function saveEventToSupabase(event: EventItem): Promise<void> {
       status: event.status,
       image_url: event.imageUrl
     });
+    if (error) {
+      console.error('Supabase save event error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase save event error:', err);
+    console.error('Supabase save event exception:', err);
+    return false;
   }
 }
 
-export async function deleteEventFromSupabase(id: string): Promise<void> {
+export async function deleteEventFromSupabase(id: string): Promise<boolean> {
   try {
-    await supabase.from('events').delete().eq('id', id);
+    const { error } = await supabase.from('events').delete().eq('id', id);
+    if (error) {
+      console.error('Supabase delete event error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase delete event error:', err);
+    console.error('Supabase delete event exception:', err);
+    return false;
   }
 }
 
@@ -222,7 +288,11 @@ export async function deleteEventFromSupabase(id: string): Promise<void> {
 export async function fetchGalleryFromSupabase(): Promise<GalleryItem[] | null> {
   try {
     const { data, error } = await supabase.from('gallery').select('*').order('created_at', { ascending: false });
-    if (error || !data) return null;
+    if (error) {
+      console.warn('Supabase fetch gallery error:', error.message || error);
+      return null;
+    }
+    if (!data) return null;
     return data.map((g: any) => ({
       id: g.id,
       title: g.title,
@@ -232,14 +302,14 @@ export async function fetchGalleryFromSupabase(): Promise<GalleryItem[] | null> 
       date: g.date || ''
     }));
   } catch (err) {
-    console.warn('Supabase fetch gallery error:', err);
+    console.warn('Supabase fetch gallery exception:', err);
     return null;
   }
 }
 
-export async function saveGalleryItemToSupabase(item: GalleryItem): Promise<void> {
+export async function saveGalleryItemToSupabase(item: GalleryItem): Promise<boolean> {
   try {
-    await supabase.from('gallery').upsert({
+    const { error } = await supabase.from('gallery').upsert({
       id: item.id,
       title: item.title,
       category: item.category,
@@ -247,16 +317,28 @@ export async function saveGalleryItemToSupabase(item: GalleryItem): Promise<void
       caption: item.caption,
       date: item.date
     });
+    if (error) {
+      console.error('Supabase save gallery item error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase save gallery item error:', err);
+    console.error('Supabase save gallery item exception:', err);
+    return false;
   }
 }
 
-export async function deleteGalleryItemFromSupabase(id: string): Promise<void> {
+export async function deleteGalleryItemFromSupabase(id: string): Promise<boolean> {
   try {
-    await supabase.from('gallery').delete().eq('id', id);
+    const { error } = await supabase.from('gallery').delete().eq('id', id);
+    if (error) {
+      console.error('Supabase delete gallery item error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase delete gallery item error:', err);
+    console.error('Supabase delete gallery item exception:', err);
+    return false;
   }
 }
 
@@ -266,7 +348,11 @@ export async function deleteGalleryItemFromSupabase(id: string): Promise<void> {
 export async function fetchFeedbacksFromSupabase(): Promise<FeedbackItem[] | null> {
   try {
     const { data, error } = await supabase.from('feedbacks').select('*').order('created_at', { ascending: false });
-    if (error || !data) return null;
+    if (error) {
+      console.warn('Supabase fetch feedbacks error:', error.message || error);
+      return null;
+    }
+    if (!data) return null;
     return data.map((f: any) => ({
       id: f.id,
       patientName: f.patient_name,
@@ -280,14 +366,14 @@ export async function fetchFeedbacksFromSupabase(): Promise<FeedbackItem[] | nul
       adminNotes: f.admin_notes || ''
     }));
   } catch (err) {
-    console.warn('Supabase fetch feedbacks error:', err);
+    console.warn('Supabase fetch feedbacks exception:', err);
     return null;
   }
 }
 
-export async function saveFeedbackToSupabase(fb: FeedbackItem): Promise<void> {
+export async function saveFeedbackToSupabase(fb: FeedbackItem): Promise<boolean> {
   try {
-    await supabase.from('feedbacks').upsert({
+    const { error } = await supabase.from('feedbacks').upsert({
       id: fb.id,
       patient_name: fb.patientName,
       email: fb.email,
@@ -299,16 +385,28 @@ export async function saveFeedbackToSupabase(fb: FeedbackItem): Promise<void> {
       status: fb.status,
       admin_notes: fb.adminNotes
     });
+    if (error) {
+      console.error('Supabase save feedback error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase save feedback error:', err);
+    console.error('Supabase save feedback exception:', err);
+    return false;
   }
 }
 
-export async function deleteFeedbackFromSupabase(id: string): Promise<void> {
+export async function deleteFeedbackFromSupabase(id: string): Promise<boolean> {
   try {
-    await supabase.from('feedbacks').delete().eq('id', id);
+    const { error } = await supabase.from('feedbacks').delete().eq('id', id);
+    if (error) {
+      console.error('Supabase delete feedback error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase delete feedback error:', err);
+    console.error('Supabase delete feedback exception:', err);
+    return false;
   }
 }
 
@@ -318,7 +416,11 @@ export async function deleteFeedbackFromSupabase(id: string): Promise<void> {
 export async function fetchAppointmentsFromSupabase(): Promise<Appointment[] | null> {
   try {
     const { data, error } = await supabase.from('appointments').select('*').order('created_at', { ascending: false });
-    if (error || !data) return null;
+    if (error) {
+      console.warn('Supabase fetch appointments error:', error.message || error);
+      return null;
+    }
+    if (!data) return null;
     return data.map((a: any) => ({
       id: a.id,
       appointmentNumber: a.appointment_number,
@@ -338,14 +440,14 @@ export async function fetchAppointmentsFromSupabase(): Promise<Appointment[] | n
       communicationLogs: a.communication_logs || []
     }));
   } catch (err) {
-    console.warn('Supabase fetch appointments error:', err);
+    console.warn('Supabase fetch appointments exception:', err);
     return null;
   }
 }
 
-export async function saveAppointmentToSupabase(app: Appointment): Promise<void> {
+export async function saveAppointmentToSupabase(app: Appointment): Promise<boolean> {
   try {
-    await supabase.from('appointments').upsert({
+    const { error } = await supabase.from('appointments').upsert({
       id: app.id,
       appointment_number: app.appointmentNumber,
       patient_name: app.patientName,
@@ -362,8 +464,14 @@ export async function saveAppointmentToSupabase(app: Appointment): Promise<void>
       symptoms: app.symptoms,
       communication_logs: app.communicationLogs || []
     });
+    if (error) {
+      console.error('Supabase save appointment error:', error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error('Supabase save appointment error:', err);
+    console.error('Supabase save appointment exception:', err);
+    return false;
   }
 }
 
@@ -373,22 +481,32 @@ export async function saveAppointmentToSupabase(app: Appointment): Promise<void>
 export async function fetchSettingFromSupabase<T>(key: string): Promise<T | null> {
   try {
     const { data, error } = await supabase.from('hospital_settings').select('value').eq('key', key).maybeSingle();
-    if (error || !data) return null;
+    if (error) {
+      console.warn(`Supabase fetch setting [${key}] error:`, error.message || error);
+      return null;
+    }
+    if (!data) return null;
     return data.value as T;
   } catch (err) {
-    console.warn(`Supabase fetch setting [${key}] error:`, err);
+    console.warn(`Supabase fetch setting [${key}] exception:`, err);
     return null;
   }
 }
 
-export async function saveSettingToSupabase<T>(key: string, value: T): Promise<void> {
+export async function saveSettingToSupabase<T>(key: string, value: T): Promise<boolean> {
   try {
-    await supabase.from('hospital_settings').upsert({
+    const { error } = await supabase.from('hospital_settings').upsert({
       key,
       value,
       updated_at: new Date().toISOString()
     });
+    if (error) {
+      console.error(`Supabase save setting [${key}] error:`, error.message || error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.error(`Supabase save setting [${key}] error:`, err);
+    console.error(`Supabase save setting [${key}] exception:`, err);
+    return false;
   }
 }

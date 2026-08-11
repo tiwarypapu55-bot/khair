@@ -41,9 +41,9 @@ export const EmployeeLoginModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
         {/* Modal Header */}
-        <div className="bg-emerald-900 text-white p-6 relative overflow-hidden">
+        <div className="bg-emerald-900 text-white p-6 relative overflow-hidden shrink-0">
           <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
             <Building2 className="w-36 h-36 text-white" />
           </div>
@@ -73,7 +73,7 @@ export const EmployeeLoginModal: React.FC = () => {
         </div>
 
         {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
           {errorMsg && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-medium flex items-start gap-2.5">
               <BadgeAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />

@@ -5,7 +5,9 @@ import { Footer } from './components/Footer';
 import { AppointmentModal } from './components/AppointmentModal';
 import { FlashAnnouncementModal } from './components/FlashAnnouncementModal';
 import { EmployeeLoginModal } from './components/EmployeeLoginModal';
+import { AdminLoginModal } from './components/AdminLoginModal';
 import { EmployeePortal } from './components/EmployeePortal';
+import { CodeProtectionGuard } from './components/CodeProtectionGuard';
 
 // Public Pages
 import { HomePage } from './pages/HomePage';
@@ -73,6 +75,7 @@ const MainContent: React.FC = () => {
       <AppointmentModal />
       <FlashAnnouncementModal />
       <EmployeeLoginModal />
+      <AdminLoginModal />
     </div>
   );
 };
@@ -80,7 +83,9 @@ const MainContent: React.FC = () => {
 export default function App() {
   return (
     <HospitalProvider>
-      <MainContent />
+      <CodeProtectionGuard>
+        <MainContent />
+      </CodeProtectionGuard>
     </HospitalProvider>
   );
 }

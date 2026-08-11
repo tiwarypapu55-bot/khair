@@ -1,9 +1,9 @@
 import React from 'react';
 import { useHospital, AdminTabType } from '../../context/HospitalContext';
-import { Globe, Settings } from 'lucide-react';
+import { Globe, LogOut } from 'lucide-react';
 
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { adminTab, setAdminTab, setIsAdminMode } = useHospital();
+  const { adminTab, setAdminTab, setIsAdminMode, adminLogout } = useHospital();
 
   const adminNavItems: Array<{ id: AdminTabType; label: string }> = [
     { id: 'home', label: 'Home' },
@@ -48,7 +48,7 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
             })}
           </nav>
 
-          {/* Right Action: Exit Admin */}
+          {/* Right Action: Exit Admin & Logout */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsAdminMode(false)}
@@ -56,7 +56,16 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
               title="Return to Public Website"
             >
               <Globe className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">Exit Admin</span>
+              <span className="hidden sm:inline">Website</span>
+            </button>
+
+            <button
+              onClick={adminLogout}
+              className="flex items-center gap-1.5 bg-rose-950 hover:bg-rose-900 text-rose-200 text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xs transition cursor-pointer border border-rose-800/80"
+              title="Log out of Admin Panel"
+            >
+              <LogOut className="w-3.5 h-3.5 text-rose-400" />
+              <span>Logout</span>
             </button>
           </div>
         </div>

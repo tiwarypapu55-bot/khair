@@ -43,7 +43,7 @@ export const AdminNotices: React.FC = () => {
       isPinned,
       priority,
       targetAudience,
-      attachmentUrl
+      docUrl: attachmentUrl
     });
 
     setTitle('');

@@ -200,7 +200,7 @@ export const Header: React.FC = () => {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-gray-100 px-4 pt-2 pb-6 space-y-1 shadow-lg">
+        <div className="lg:hidden bg-white border-t border-slate-200 px-4 pt-3 pb-6 space-y-1.5 shadow-xl animate-in slide-in-from-top duration-200">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -208,35 +208,60 @@ export const Header: React.FC = () => {
                 setCurrentTab(item.id);
                 setMobileMenuOpen(false);
               }}
-              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium ${
+              className={`w-full text-left px-4 py-3 rounded-xs text-sm font-bold uppercase tracking-wider transition ${
                 currentTab === item.id
-                  ? 'bg-blue-50 text-blue-700 font-semibold'
-                  : 'text-slate-700 hover:bg-slate-50'
+                  ? 'bg-emerald-900 text-white shadow-xs'
+                  : 'text-slate-700 hover:bg-slate-100'
               }`}
             >
               {item.label}
             </button>
           ))}
-          <div className="pt-3 border-t border-gray-100 flex flex-col gap-2">
+          <div className="pt-3 border-t border-slate-200 flex flex-col gap-2.5">
             <button
               onClick={() => {
                 setIsAppointmentModalOpen(true);
                 setMobileMenuOpen(false);
               }}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold text-sm py-2.5 rounded-xl"
+              className="w-full flex items-center justify-center gap-2 bg-emerald-900 hover:bg-emerald-950 text-white font-extrabold text-xs uppercase tracking-wider py-3 rounded-xs shadow-xs"
             >
               <Calendar className="w-4 h-4" />
               Book OPD Appointment
             </button>
+            
+            {loggedInEmployee ? (
+              <button
+                onClick={() => {
+                  setIsEmployeePortalOpen(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs uppercase tracking-wider py-2.5 rounded-xs shadow-xs"
+              >
+                <UserCheck className="w-4 h-4" />
+                Staff Portal ({loggedInEmployee.name.split(' ')[0]})
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setIsEmployeeModalOpen(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-950 text-emerald-300 font-extrabold text-xs uppercase tracking-wider py-2.5 rounded-xs shadow-xs border border-emerald-800"
+              >
+                <UserCheck className="w-4 h-4 text-emerald-400" />
+                Employee Login
+              </button>
+            )}
+
             <button
               onClick={() => {
                 setIsAdminMode(true);
                 setMobileMenuOpen(false);
               }}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold text-sm py-2.5 rounded-xl"
+              className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs uppercase tracking-wider py-2.5 rounded-xs shadow-xs"
             >
-              <LayoutDashboard className="w-4 h-4" />
-              Admin Dashboard
+              <LayoutDashboard className="w-4 h-4 text-emerald-400" />
+              Admin Portal
             </button>
           </div>
         </div>

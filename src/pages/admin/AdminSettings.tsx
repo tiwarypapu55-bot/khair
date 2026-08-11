@@ -21,9 +21,9 @@ export const AdminSettings: React.FC = () => {
   const [showSqlCopied, setShowSqlCopied] = useState(false);
 
   const supabaseSqlScript = `-- ============================================================
--- KHAIR HOSPITAL - SUPABASE DATABASE SCHEMA (100% LINTER COMPLIANT)
--- Copy and run this script in Supabase SQL Editor (https://fgkfkktuxbunvawerllm.supabase.co)
--- Fully Idempotent DDL - Resolves all 10 Supabase Security Linter Warnings
+-- KHAIR HOSPITAL - CLOUD DATABASE SCHEMA
+-- Copy and run this script in SQL Editor Console
+-- Fully Idempotent DDL - Resolves Security & Function Constraints
 -- ============================================================
 
 -- Enable pgcrypto extension for gen_random_uuid() support
@@ -476,7 +476,7 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            Supabase DB
+            Cloud Database
           </button>
         </div>
       </div>
@@ -491,7 +491,7 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
         </div>
       )}
 
-      {/* TAB 4: SUPABASE DATABASE & SCHEMA */}
+      {/* TAB 4: CLOUD DATABASE & SCHEMA */}
       {activeSubTab === 'database' && (
         <div className="space-y-6">
           <div className="bg-white rounded-xs border border-slate-200 p-6 shadow-xs space-y-5">
@@ -499,7 +499,7 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
               <div>
                 <h3 className="font-serif font-bold text-lg text-slate-900 flex items-center gap-2">
                   <ShieldCheck className="w-5 h-5 text-emerald-700" />
-                  Supabase Cloud Database Status
+                  Hospital Cloud Database Status
                 </h3>
                 <p className="text-xs text-slate-500">Live multi-device database synchronization & RLS security configuration.</p>
               </div>
@@ -523,7 +523,7 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div className="bg-slate-50 border border-slate-200 rounded-xs p-4 space-y-2">
-                <span className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">Supabase Project URL</span>
+                <span className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">Cloud Database Endpoint</span>
                 <code className="bg-white border border-slate-300 px-3 py-1.5 rounded-xs block font-mono text-emerald-900 font-bold overflow-x-auto">
                   https://fgkfkktuxbunvawerllm.supabase.co
                 </code>
@@ -555,7 +555,7 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
                 Row Level Security (RLS) Policy
               </div>
               <p>
-                All 8 hospital tables have Row Level Security enabled. Click <strong>"Copy SQL DDL Script"</strong> above and paste into the Supabase SQL Editor if you ever need to reset or run migrations manually.
+                All 8 hospital tables have Row Level Security enabled. Click <strong>"Copy SQL DDL Script"</strong> above and paste into the Database Console SQL Editor if you ever need to reset or run migrations manually.
               </p>
             </div>
           </div>
