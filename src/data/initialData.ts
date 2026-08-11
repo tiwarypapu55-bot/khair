@@ -501,7 +501,8 @@ export const INITIAL_SLIDER_SETTINGS: SliderSetting[] = [
       'Clean & Comfort Waiting Zones'
     ],
     accentColor: 'from-amber-500 to-amber-600',
-    isActive: true
+    isActive: true,
+    cardBgClass: 'bg-gradient-to-br from-[#2c1654] via-[#1b357a] to-[#00b4d8] text-white border-blue-400/30'
   },
   {
     id: 'slide-2',
@@ -518,7 +519,8 @@ export const INITIAL_SLIDER_SETTINGS: SliderSetting[] = [
       'Pharmacy'
     ],
     accentColor: 'from-emerald-600 to-teal-700',
-    isActive: true
+    isActive: true,
+    cardBgClass: 'bg-gradient-to-br from-[#e8acac] via-[#d89f9f] to-[#cb8e8e] text-slate-950 border-[#c48585]'
   },
   {
     id: 'slide-3',
@@ -530,7 +532,8 @@ export const INITIAL_SLIDER_SETTINGS: SliderSetting[] = [
     bgImage: bannerWelcome,
     badge: 'We Care About You',
     accentColor: 'from-blue-600 to-indigo-700',
-    isActive: true
+    isActive: true,
+    cardBgClass: 'bg-gradient-to-br from-[#022c22] via-[#064e3b] to-[#0f172a] text-white border-emerald-500/30'
   },
   {
     id: 'slide-4',
@@ -553,7 +556,8 @@ export const INITIAL_SLIDER_SETTINGS: SliderSetting[] = [
       'Dedicated Nursing Staff'
     ],
     accentColor: 'from-purple-600 to-indigo-800',
-    isActive: true
+    isActive: true,
+    cardBgClass: 'bg-gradient-to-br from-[#1e1b4b] via-[#1e3a8a] to-[#0f172a] text-white border-indigo-500/30'
   }
 ];
 

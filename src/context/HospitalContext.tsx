@@ -175,8 +175,15 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [sliderSettings, setSliderSettings] = useState<SliderSetting[]>(() => {
-    const saved = localStorage.getItem('khair_slider_settings_v4') || localStorage.getItem('khair_slider_settings');
-    return saved ? JSON.parse(saved) : INITIAL_SLIDER_SETTINGS;
+    const saved = localStorage.getItem('khair_slider_settings_v5');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.warn('Failed to parse slider settings:', e);
+      }
+    }
+    return INITIAL_SLIDER_SETTINGS;
   });
 
   const [logoSettings, setLogoSettings] = useState<LogoSettings>(() => {
@@ -469,7 +476,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     try {
-      localStorage.setItem('khair_slider_settings_v4', JSON.stringify(sliderSettings));
+      localStorage.setItem('khair_slider_settings_v5', JSON.stringify(sliderSettings));
     } catch (e) {
       console.warn('Failed to save slider settings to localStorage:', e);
     }

@@ -171,152 +171,205 @@ export const HeroSlider: React.FC = () => {
         </div>
 
         {/* 3. NON-OVERLAPPING DETAILS & HELPLINE PANEL BELOW IMAGE */}
-        <div className="bg-slate-950 text-white rounded-2xl p-6 sm:p-8 border border-slate-800 shadow-xl">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Left Content Area */}
-            <div className="lg:col-span-8 space-y-5">
-              {/* Tagline Pill */}
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-widest">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                {current.tagline}
-              </div>
+        {(() => {
+          const cardBg = current.cardBgClass || (
+            currentSlide === 0
+              ? 'bg-gradient-to-br from-[#2c1654] via-[#1b357a] to-[#00b4d8] text-white border-blue-400/30'
+              : currentSlide === 1
+              ? 'bg-gradient-to-br from-[#e8acac] via-[#d89f9f] to-[#cb8e8e] text-slate-950 border-[#c48585]'
+              : currentSlide === 2
+              ? 'bg-gradient-to-br from-[#022c22] via-[#064e3b] to-[#0f172a] text-white border-emerald-500/30'
+              : 'bg-gradient-to-br from-[#1e1b4b] via-[#1e3a8a] to-[#0f172a] text-white border-indigo-500/30'
+          );
+          const isLightBg = cardBg.includes('text-slate-950') || cardBg.includes('#d89f9f') || cardBg.includes('#e8acac');
 
-              {/* Headline */}
-              <div>
-                <h1 className="text-2xl sm:text-4xl font-serif font-extrabold tracking-tight text-white leading-tight">
-                  {current.title}
-                </h1>
-                {current.highlightText && (
-                  <p className="text-lg sm:text-xl font-bold text-amber-400 mt-1 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
-                    {current.highlightText}
-                  </p>
-                )}
-              </div>
-
-              {/* Hindi Slogan if available */}
-              {current.hindiSlogan && (
-                <div className="bg-emerald-950/80 border-l-4 border-emerald-400 p-3 rounded-r-xs">
-                  <p className="text-base sm:text-lg font-serif italic text-emerald-200">
-                    "{current.hindiSlogan}"
-                  </p>
-                </div>
-              )}
-
-              {/* Description quote */}
-              {current.description && !current.hindiSlogan && (
-                <p className="text-slate-300 text-sm sm:text-base max-w-2xl leading-relaxed">
-                  {current.description}
-                </p>
-              )}
-
-              {/* Bullet Points */}
-              {current.leftList && current.rightList && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs sm:text-sm font-medium text-slate-200">
-                  <div className="space-y-2">
-                    {current.leftList.map((item, i) => (
-                      <div key={i} className="flex items-center gap-2 bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span>{item}</span>
-                      </div>
-                    ))}
+          return (
+            <div className={`rounded-2xl p-6 sm:p-8 border shadow-2xl transition-all duration-500 ${cardBg}`}>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                {/* Left Content Area */}
+                <div className="lg:col-span-8 space-y-5">
+                  {/* Tagline Pill */}
+                  <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-widest ${
+                    isLightBg
+                      ? 'bg-slate-950/10 border border-slate-950/20 text-slate-950 shadow-2xs'
+                      : 'bg-emerald-500/20 border border-emerald-400/30 text-emerald-300'
+                  }`}>
+                    <Sparkles className={`w-3.5 h-3.5 ${isLightBg ? 'text-amber-900' : 'text-amber-400'}`} />
+                    <span>{current.tagline}</span>
                   </div>
-                  <div className="space-y-2">
-                    {current.rightList.map((item, i) => (
-                      <div key={i} className="flex items-center gap-2 bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
-                        <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                        <span>{item}</span>
+
+                  {/* Headline */}
+                  <div>
+                    <h1 className={`text-2xl sm:text-4xl font-serif font-extrabold tracking-tight leading-tight ${
+                      isLightBg ? 'text-slate-950' : 'text-white'
+                    }`}>
+                      {current.title}
+                    </h1>
+                    {current.highlightText && (
+                      <p className={`text-lg sm:text-xl font-black mt-1 flex items-center gap-2 ${
+                        isLightBg ? 'text-amber-950' : 'text-amber-300'
+                      }`}>
+                        <span className={`w-2 h-2 rounded-full animate-ping inline-block ${
+                          isLightBg ? 'bg-amber-950' : 'bg-amber-300'
+                        }`} />
+                        <span>{current.highlightText}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Hindi Slogan if available */}
+                  {current.hindiSlogan && (
+                    <div className={`p-3.5 rounded-r-lg border-l-4 ${
+                      isLightBg
+                        ? 'bg-white/70 border-emerald-900 text-slate-950 font-bold italic shadow-xs'
+                        : 'bg-slate-900/70 border-emerald-400 text-emerald-100 italic'
+                    }`}>
+                      <p className="text-base sm:text-lg font-serif">
+                        "{current.hindiSlogan}"
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Description quote */}
+                  {current.description && !current.hindiSlogan && (
+                    <p className={`text-sm sm:text-base max-w-2xl leading-relaxed ${
+                      isLightBg ? 'text-slate-900 font-medium' : 'text-slate-200'
+                    }`}>
+                      {current.description}
+                    </p>
+                  )}
+
+                  {/* Bullet Points */}
+                  {current.leftList && current.rightList && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs sm:text-sm font-medium">
+                      <div className="space-y-2">
+                        {current.leftList.map((item, i) => (
+                          <div key={i} className={`flex items-center gap-2 p-2.5 rounded-lg border font-semibold ${
+                            isLightBg
+                              ? 'bg-white/80 backdrop-blur-xs text-slate-900 border-slate-300/80 shadow-2xs'
+                              : 'bg-slate-900/80 backdrop-blur-xs text-slate-100 border-white/10'
+                          }`}>
+                            <CheckCircle2 className={`w-4 h-4 shrink-0 ${isLightBg ? 'text-emerald-800' : 'text-emerald-400'}`} />
+                            <span>{item}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                      <div className="space-y-2">
+                        {current.rightList.map((item, i) => (
+                          <div key={i} className={`flex items-center gap-2 p-2.5 rounded-lg border font-semibold ${
+                            isLightBg
+                              ? 'bg-white/80 backdrop-blur-xs text-slate-900 border-slate-300/80 shadow-2xs'
+                              : 'bg-slate-900/80 backdrop-blur-xs text-slate-100 border-white/10'
+                          }`}>
+                            <CheckCircle2 className={`w-4 h-4 shrink-0 ${isLightBg ? 'text-amber-900' : 'text-amber-400'}`} />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Clinical Services Box */}
+                  {current.serviceBox && (
+                    <div className={`p-4 rounded-xl space-y-2 max-w-xl border ${
+                      isLightBg
+                        ? 'bg-white/85 backdrop-blur-xs border-slate-300 text-slate-950 shadow-xs'
+                        : 'bg-slate-900/80 backdrop-blur-xs border-emerald-800/80 text-white'
+                    }`}>
+                      <span className={`text-xs font-black uppercase tracking-widest block border-b pb-1 ${
+                        isLightBg ? 'text-slate-950 border-slate-300' : 'text-emerald-300 border-emerald-800/80'
+                      }`}>
+                        OUR CORE CLINICAL SERVICES
+                      </span>
+                      <div className="grid grid-cols-2 gap-2 text-xs font-extrabold pt-1">
+                        {current.serviceBox.map((srv, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${isLightBg ? 'bg-emerald-900' : 'bg-emerald-400'}`} />
+                            <span>{srv}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
+                    <button
+                      onClick={() => setIsAppointmentModalOpen(true)}
+                      className={`font-black text-xs sm:text-sm uppercase tracking-wider px-5 py-3 rounded-lg shadow-md transition-transform hover:scale-[1.02] cursor-pointer flex items-center gap-2 ${
+                        isLightBg
+                          ? 'bg-emerald-900 hover:bg-emerald-950 text-white'
+                          : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black'
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4" /> Book OPD Slot
+                    </button>
+
+                    <button
+                      onClick={() => setCurrentTab('doctors')}
+                      className={`font-black text-xs sm:text-sm uppercase tracking-wider px-5 py-3 rounded-lg border transition cursor-pointer flex items-center gap-2 ${
+                        isLightBg
+                          ? 'bg-slate-900 hover:bg-slate-950 text-white border-slate-800 shadow-md'
+                          : 'bg-slate-900/80 hover:bg-slate-900 text-white border-white/20'
+                      }`}
+                    >
+                      <HeartPulse className="w-4 h-4 text-emerald-400" /> Specialist Faculty
+                    </button>
                   </div>
                 </div>
-              )}
 
-              {/* Clinical Services Box */}
-              {current.serviceBox && (
-                <div className="bg-emerald-950 border border-emerald-800/80 p-4 rounded-xl space-y-2 max-w-xl">
-                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-300 block border-b border-emerald-800/80 pb-1">
-                    OUR CORE CLINICAL SERVICES
-                  </span>
-                  <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-white pt-1">
-                    {current.serviceBox.map((srv, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                        <span>{srv}</span>
-                      </div>
-                    ))}
+                {/* Right Quick Contact Card */}
+                <div className="lg:col-span-4 w-full">
+                  <div className="bg-slate-900 text-white border border-slate-800 p-6 rounded-xl space-y-4 shadow-xl">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-400">
+                        Khair Hospital Basti
+                      </span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-serif font-bold text-white">Direct Helpline & Desk</h3>
+                      <p className="text-xs text-slate-300 mt-1">
+                        Call for emergency admission, ambulance, or doctor inquiry.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2.5 text-xs font-mono pt-1">
+                      <a href={`tel:${businessSettings.landlinePhone}`} className="flex items-center gap-2.5 text-slate-200 hover:text-emerald-300 transition">
+                        <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>{businessSettings.landlinePhone}</span>
+                      </a>
+                      <a href={`tel:${businessSettings.primaryPhone}`} className="flex items-center gap-2.5 text-slate-200 hover:text-emerald-300 transition font-bold text-sm">
+                        <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>{businessSettings.primaryPhone}</span>
+                      </a>
+                      <a href={`https://${businessSettings.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-slate-200 hover:text-emerald-300 transition">
+                        <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="truncate">{businessSettings.website}</span>
+                      </a>
+                      <a href={`mailto:${businessSettings.email}`} className="flex items-center gap-2.5 text-slate-200 hover:text-emerald-300 transition">
+                        <Mail className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="truncate">{businessSettings.email}</span>
+                      </a>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-800">
+                      <button
+                        onClick={() => setCurrentTab('facilities')}
+                        className="w-full text-center text-xs font-bold text-emerald-400 hover:underline uppercase tracking-wider cursor-pointer"
+                      >
+                        View All Facilities & Units →
+                      </button>
+                    </div>
                   </div>
                 </div>
-              )}
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <button
-                  onClick={() => setIsAppointmentModalOpen(true)}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm uppercase tracking-wider px-5 py-3 rounded-lg shadow-md transition-transform hover:scale-[1.02] cursor-pointer flex items-center gap-2"
-                >
-                  <Calendar className="w-4 h-4" /> Book OPD Slot
-                </button>
-
-                <button
-                  onClick={() => setCurrentTab('doctors')}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm uppercase tracking-wider px-5 py-3 rounded-lg border border-slate-700 transition cursor-pointer flex items-center gap-2"
-                >
-                  <HeartPulse className="w-4 h-4 text-emerald-400" /> Specialist Faculty
-                </button>
               </div>
             </div>
-
-            {/* Right Quick Contact Card */}
-            <div className="lg:col-span-4 w-full">
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl space-y-4 shadow-xs">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-                    Khair Hospital Basti
-                  </span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-serif font-bold text-white">Direct Helpline & Desk</h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Call for emergency admission, ambulance, or doctor inquiry.
-                  </p>
-                </div>
-
-                <div className="space-y-2.5 text-xs font-mono pt-1">
-                  <a href={`tel:${businessSettings.landlinePhone}`} className="flex items-center gap-2.5 text-slate-200 hover:text-emerald-300 transition">
-                    <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>{businessSettings.landlinePhone}</span>
-                  </a>
-                  <a href={`tel:${businessSettings.primaryPhone}`} className="flex items-center gap-2.5 text-slate-200 hover:text-emerald-300 transition font-bold text-sm">
-                    <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>{businessSettings.primaryPhone}</span>
-                  </a>
-                  <a href={`https://${businessSettings.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-slate-200 hover:text-emerald-300 transition">
-                    <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span className="truncate">{businessSettings.website}</span>
-                  </a>
-                  <a href={`mailto:${businessSettings.email}`} className="flex items-center gap-2.5 text-slate-200 hover:text-emerald-300 transition">
-                    <Mail className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span className="truncate">{businessSettings.email}</span>
-                  </a>
-                </div>
-
-                <div className="pt-2 border-t border-slate-800">
-                  <button
-                    onClick={() => setCurrentTab('facilities')}
-                    className="w-full text-center text-xs font-bold text-emerald-400 hover:underline uppercase tracking-wider cursor-pointer"
-                  >
-                    View All Facilities & Units →
-                  </button>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
+          );
+        })()}
 
       </div>
 

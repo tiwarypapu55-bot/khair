@@ -151,6 +151,7 @@ export interface SliderSetting {
   serviceBox?: string[];
   accentColor: string;
   isActive: boolean;
+  cardBgClass?: string;
 }
 
 export interface LogoSettings {
