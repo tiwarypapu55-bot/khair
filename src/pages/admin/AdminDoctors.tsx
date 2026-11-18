@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useHospital } from '../../context/HospitalContext';
 import { Doctor, DoctorStatus } from '../../types';
-import { Plus, Search, Edit2, Trash2, CheckCircle2, Stethoscope, X, UserCheck } from 'lucide-react';
-import { FileUploadInput } from '../../components/FileUploadInput';
+import { Plus, Search, Edit2, Trash2, CheckCircle2, Stethoscope, X, UserCheck, Lock } from 'lucide-react';
+import { getFixedDoctorImage } from '../../data/initialData';
 
 export const AdminDoctors: React.FC = () => {
   const { doctors, departments, addDoctor, updateDoctor, deleteDoctor } = useHospital();
@@ -69,14 +69,15 @@ export const AdminDoctors: React.FC = () => {
     if (!name || !department) return;
 
     if (editingDoctor) {
+      const fixedPhoto = getFixedDoctorImage(editingDoctor.id, editingDoctor.image);
       updateDoctor(editingDoctor.id, {
         name, qualification, department, specialization, experience,
-        image, opdSchedule, fee, phone, status, bio, roomNo
+        image: fixedPhoto, opdSchedule, fee, phone, status, bio, roomNo
       });
     } else {
       addDoctor({
         name, qualification, department, specialization, experience,
-        image, opdSchedule, fee, phone, status, bio, roomNo
+        image: getFixedDoctorImage(name, image), opdSchedule, fee, phone, status, bio, roomNo
       });
     }
 
@@ -85,6 +86,17 @@ export const AdminDoctors: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Fixed Doctor Photo Alert Notice */}
+      <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-2xl shadow-xs space-y-1.5">
+        <div className="flex items-center gap-2 text-amber-950 font-bold text-sm">
+          <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+          <span>Doctor Photos Fixed & Static (Photo Modification Inactive till next command)</span>
+        </div>
+        <p className="text-xs text-amber-900 leading-relaxed">
+          The doctor profile photos for Dr Mushtaq Ahmad Khan, Dr Rashid Ahmad Khan, and Dr Farha Deeba have been made permanent static photos. The provision to change or upload doctor photos has been made inactive until further instruction.
+        </p>
+      </div>
+
       {/* Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div>
@@ -134,9 +146,19 @@ export const AdminDoctors: React.FC = () => {
                 <tr key={doc.id} className="hover:bg-slate-50/80 transition">
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <img src={doc.image} alt={doc.name} className="w-10 h-10 rounded-xl object-cover object-top shrink-0" />
+                      <div className="relative shrink-0">
+                        <img src={getFixedDoctorImage(doc.id, doc.image)} alt={doc.name} className="w-11 h-11 rounded-xl object-cover object-top border border-slate-200" />
+                        <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 rounded-full p-0.5 border border-white shadow-2xs" title="Fixed Static Photo (Locked)">
+                          <Lock className="w-2.5 h-2.5" />
+                        </span>
+                      </div>
                       <div>
-                        <span className="font-bold text-slate-900 block">{doc.name}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-900 block">{doc.name}</span>
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded-xs flex items-center gap-0.5">
+                            <Lock className="w-2 h-2 text-amber-600" /> Static
+                          </span>
+                        </div>
                         <span className="text-[11px] text-blue-600 font-medium">{doc.specialization}</span>
                       </div>
                     </div>
@@ -320,12 +342,38 @@ export const AdminDoctors: React.FC = () => {
                 />
               </div>
 
-              <FileUploadInput
-                label="Doctor Profile Photo (JPG, PNG, or URL)"
-                value={image}
-                onChange={setImage}
-                helpText="Upload doctor photo from your computer (JPG, PNG) or enter a web URL."
-              />
+              {/* Doctor Profile Photo - Inactive Provision in Static Mode */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block font-bold text-slate-700 text-xs">
+                    Doctor Profile Photo (Fixed & Static Mode Active)
+                  </label>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Lock className="w-2.5 h-2.5 text-amber-700" /> Photo Changing Inactive
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3.5 bg-white p-3 rounded-xl border border-slate-200">
+                  <div className="relative shrink-0">
+                    <img
+                      src={editingDoctor ? getFixedDoctorImage(editingDoctor.id, editingDoctor.image) : (image || getFixedDoctorImage(''))}
+                      alt="Doctor profile"
+                      className="w-16 h-18 rounded-xl object-cover object-top border border-slate-300 shadow-2xs"
+                    />
+                    <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 rounded-full p-1 border border-white">
+                      <Lock className="w-3 h-3" />
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <span>Doctor Photo Locked as Permanent Static Image</span>
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                      The provision of changing, replacing, or uploading doctor photos has been made inactive till the next command. Doctor photos remain static and fixed.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Biography / Overview</label>

@@ -1,10 +1,11 @@
 import React from 'react';
 import { useHospital } from '../context/HospitalContext';
 import { KhairLogo } from './KhairLogo';
-import { UserCheck, ShieldCheck } from 'lucide-react';
+import { HospitalBrandName } from './HospitalBrandName';
+import { UserCheck, LayoutDashboard } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { setCurrentTab, setIsAdminMode, setIsEmployeeModalOpen, loggedInEmployee, setIsEmployeePortalOpen, logoSettings } = useHospital();
+  const { setCurrentTab, setIsAdminMode, setIsEmployeeModalOpen, loggedInEmployee, setIsEmployeePortalOpen, logoSettings, businessSettings } = useHospital();
 
   return (
     <footer className="w-full relative overflow-hidden shadow-2xl text-slate-900 font-sans">
@@ -55,11 +56,11 @@ export const Footer: React.FC = () => {
                     <KhairLogo className="w-12 h-12 shrink-0 shadow-md" />
                   )}
                   <div>
-                    <h3 className="text-2xl font-serif font-black tracking-wider text-slate-950 uppercase">
-                      KHAIR HOSPITAL
+                    <h3 className="text-2xl font-serif font-black tracking-wider uppercase">
+                      <HospitalBrandName name={businessSettings?.hospitalName || 'KHAIR HOSPITAL'} />
                     </h3>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-800">
-                      EXCELLENCE IN HEALTHCARE • BASTI
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-900/80">
+                      {businessSettings?.tagline || 'EXCELLENCE IN HEALTHCARE • BASTI'}
                     </p>
                   </div>
                 </div>
@@ -149,34 +150,40 @@ export const Footer: React.FC = () => {
                 © {new Date().getFullYear()} KHAIR HOSPITAL. All Rights Reserved.
               </p>
 
-              <div className="flex items-center gap-3 sm:gap-4 flex-wrap text-xs">
+              <div className="flex items-center gap-3 sm:gap-3.5 flex-wrap text-xs">
                 <span className="text-slate-700">Developed by <strong className="text-slate-950 font-bold">Digital Communique</strong></span>
-                <span className="text-slate-400">|</span>
+                <span className="text-slate-400 hidden sm:inline">|</span>
 
-                {loggedInEmployee ? (
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {loggedInEmployee ? (
+                    <button
+                      onClick={() => setIsEmployeePortalOpen(true)}
+                      className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded-xs font-extrabold uppercase text-[11px] tracking-wider transition cursor-pointer shadow-xs"
+                      title={`Open Staff Portal (${loggedInEmployee.name})`}
+                    >
+                      <UserCheck className="w-3.5 h-3.5 text-slate-950" />
+                      <span>Staff Portal ({loggedInEmployee.name.split(' ')[0]})</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setIsEmployeeModalOpen(true)}
+                      className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-950 text-emerald-300 px-3 py-1.5 rounded-xs font-extrabold uppercase text-[11px] tracking-wider transition cursor-pointer shadow-xs border border-emerald-800/60"
+                      title="Employee Login with Password"
+                    >
+                      <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Employee Login</span>
+                    </button>
+                  )}
+
                   <button
-                    onClick={() => setIsEmployeePortalOpen(true)}
-                    className="bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-md font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    onClick={() => setIsAdminMode(true)}
+                    className="flex items-center gap-1.5 bg-emerald-900 hover:bg-emerald-950 text-white px-3 py-1.5 rounded-xs font-extrabold uppercase text-[11px] tracking-wider transition cursor-pointer shadow-xs"
+                    title="Open Hospital Admin Panel"
                   >
-                    <UserCheck className="w-3.5 h-3.5" /> Employee Portal ({loggedInEmployee.name.split(' ')[0]})
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                    <span>Admin Portal</span>
                   </button>
-                ) : (
-                  <button
-                    onClick={() => setIsEmployeeModalOpen(true)}
-                    className="bg-blue-900 hover:bg-blue-950 text-amber-300 px-2.5 py-1 rounded-md font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
-                  >
-                    <UserCheck className="w-3.5 h-3.5 text-amber-300" /> Employee Login
-                  </button>
-                )}
-
-                <span className="text-slate-400">|</span>
-
-                <button
-                  onClick={() => setIsAdminMode(true)}
-                  className="bg-emerald-800 hover:bg-emerald-900 text-white px-2.5 py-1 rounded-md font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" /> Admin Portal
-                </button>
+                </div>
               </div>
             </div>
           </div>

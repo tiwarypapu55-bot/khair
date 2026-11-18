@@ -31,6 +31,12 @@ export const AdminHome: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           <button
+            onClick={() => setAdminTab('departments')}
+            className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xs transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+          >
+            <ImageIcon className="w-4 h-4" /> Department Photos
+          </button>
+          <button
             onClick={() => setAdminTab('doctor-list')}
             className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xs transition cursor-pointer flex items-center gap-1.5 shadow-xs"
           >

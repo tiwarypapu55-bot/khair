@@ -1,12 +1,14 @@
 import React from 'react';
 import { useHospital, AdminTabType } from '../../context/HospitalContext';
 import { Globe, LogOut } from 'lucide-react';
+import { SyncStatusBadge } from '../../components/SyncStatusBadge';
 
 export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { adminTab, setAdminTab, setIsAdminMode, adminLogout } = useHospital();
 
   const adminNavItems: Array<{ id: AdminTabType; label: string }> = [
     { id: 'home', label: 'Home' },
+    { id: 'departments', label: 'Departments' },
     { id: 'doctor-list', label: 'Doctor List' },
     { id: 'employee', label: 'Employee' },
     { id: 'gallery', label: 'Gallery' },
@@ -48,8 +50,10 @@ export const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children 
             })}
           </nav>
 
-          {/* Right Action: Exit Admin & Logout */}
+          {/* Right Action: Sync Status, Exit Admin & Logout */}
           <div className="flex items-center gap-2">
+            <SyncStatusBadge variant="pill" className="bg-emerald-950/80 text-emerald-200 border-emerald-700/60" />
+
             <button
               onClick={() => setIsAdminMode(false)}
               className="flex items-center gap-1.5 bg-emerald-950 hover:bg-black text-white text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xs transition cursor-pointer border border-emerald-800"

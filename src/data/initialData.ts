@@ -7,11 +7,28 @@ import bannerFacilities from '../assets/images/khair_banner_facilities_178620922
 import bannerEyecare from '../assets/images/khair_banner_eyecare_1786209242082.jpg';
 import bannerWelcome from '../assets/images/khair_banner_welcome_1786209260002.jpg';
 import bannerSurgery from '../assets/images/khair_banner_surgery_1786252089141.jpg';
-import khairLogoImg from '../assets/images/khair_hospital_logo_1786262717216.jpg';
+import khairLogoImg from '../assets/images/khair_new_logo_1789555306483.jpg';
 
 import drMushtaqImg from '../assets/images/dr_mushtaq_khan_1786250783424.jpg';
 import drRashidImg from '../assets/images/dr_rashid_khan_1786250799156.jpg';
 import drFarhaImg from '../assets/images/dr_farha_deeba_1786250814040.jpg';
+
+// Fixed and static doctor images
+export const STATIC_DOCTOR_IMAGES: Record<string, string> = {
+  'doc-1': drMushtaqImg,
+  'doc-2': drRashidImg,
+  'doc-3': drFarhaImg,
+};
+
+export const getFixedDoctorImage = (idOrName: string, fallback?: string): string => {
+  const key = (idOrName || '').toLowerCase();
+  if (key === 'doc-1' || key.includes('mushtaq')) return drMushtaqImg;
+  if (key === 'doc-2' || key.includes('rashid')) return drRashidImg;
+  if (key === 'doc-3' || key.includes('farha')) return drFarhaImg;
+  return STATIC_DOCTOR_IMAGES[idOrName] || fallback || drMushtaqImg;
+};
+
+export const IS_DOCTOR_PHOTO_EDITING_INACTIVE = true;
 
 export const INITIAL_DOCTORS: Doctor[] = [
   {
@@ -479,7 +496,8 @@ As the Director of Khair Hospital, I take immense pride in our team’s integrit
   ]
 };
 
-export const INITIAL_SLIDER_SETTINGS: SliderSetting[] = [
+// 4 Presently uploaded banners fixed as permanent static banners
+export const STATIC_HERO_BANNERS: SliderSetting[] = [
   {
     id: 'slide-1',
     tagline: 'Multi-Specialty & Trauma Care',
@@ -560,6 +578,9 @@ export const INITIAL_SLIDER_SETTINGS: SliderSetting[] = [
     cardBgClass: 'bg-gradient-to-br from-[#1e1b4b] via-[#1e3a8a] to-[#0f172a] text-white border-indigo-500/30'
   }
 ];
+
+export const INITIAL_SLIDER_SETTINGS: SliderSetting[] = STATIC_HERO_BANNERS;
+export const ARE_BANNERS_STATIC = true;
 
 export const INITIAL_LOGO_SETTINGS: LogoSettings = {
   headerLogoUrl: khairLogoImg,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useHospital } from '../context/HospitalContext';
 import { HeroSlider } from '../components/HeroSlider';
 import drMushtaqImg from '../assets/images/dr_mushtaq_khan_1786250783424.jpg';
+import { getFixedDoctorImage } from '../data/initialData';
 import {
   Calendar, Stethoscope, HeartPulse, Award,
   Users, Activity, CheckCircle2, Clock, MapPin, Phone,
@@ -530,7 +531,7 @@ export const HomePage: React.FC = () => {
               <div className="space-y-3">
                 <div className="aspect-3/4 w-full bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 shadow-xs">
                   <img
-                    src={doc.image}
+                    src={getFixedDoctorImage(doc.id, doc.image)}
                     alt={doc.name}
                     className="w-full h-full object-cover object-top hover:scale-102 transition-transform duration-300"
                     referrerPolicy="no-referrer"

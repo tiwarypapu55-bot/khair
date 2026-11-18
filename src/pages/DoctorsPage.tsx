@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useHospital } from '../context/HospitalContext';
 import { Stethoscope, Search, Calendar, Clock, Phone } from 'lucide-react';
+import { getFixedDoctorImage } from '../data/initialData';
 
 export const DoctorsPage: React.FC = () => {
   const { doctors, departments, setIsAppointmentModalOpen, setSelectedDoctorForBooking } = useHospital();
@@ -77,7 +78,7 @@ export const DoctorsPage: React.FC = () => {
                 {/* Doctor Header */}
                 <div className="flex items-start gap-4">
                   <img
-                    src={doc.image}
+                    src={getFixedDoctorImage(doc.id, doc.image)}
                     alt={doc.name}
                     className="w-24 h-28 sm:w-28 sm:h-32 rounded-2xl object-cover object-top border border-slate-200 shadow-xs shrink-0 bg-slate-50"
                   />

@@ -1,294 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useHospital } from '../../context/HospitalContext';
-import { SliderSetting } from '../../types';
 import { INITIAL_LOGO_SETTINGS } from '../../data/initialData';
 import {
-  Building2, Sliders, Image as ImageIcon, Save, Plus, Trash2,
-  CheckCircle2, AlertCircle, Eye, EyeOff, ShieldCheck, HeartPulse,
-  Phone, Mail, MapPin, Globe, Clock, Sparkles, ArrowUp, ArrowDown, Upload, Edit3, RotateCcw
+  Building2, Sliders, Image as ImageIcon, Save,
+  CheckCircle2, HeartPulse,
+  Phone, Mail, MapPin, Globe, Clock, Sparkles, Lock, ShieldCheck, RotateCcw
 } from 'lucide-react';
 import { FileUploadInput } from '../../components/FileUploadInput';
+import { HospitalBrandName } from '../../components/HospitalBrandName';
 
 export const AdminSettings: React.FC = () => {
   const {
     businessSettings, updateBusinessSettings,
-    sliderSettings, addSlider, updateSlider, deleteSlider, toggleSliderStatus, reorderSliders,
-    logoSettings, updateLogoSettings, isSupabaseConnected
+    sliderSettings,
+    logoSettings, updateLogoSettings
   } = useHospital();
 
-  const [activeSubTab, setActiveSubTab] = useState<'business' | 'slider' | 'logo' | 'database'>('business');
+  const [activeSubTab, setActiveSubTab] = useState<'business' | 'slider' | 'logo'>('business');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [showSqlCopied, setShowSqlCopied] = useState(false);
 
-  const supabaseSqlScript = `-- ============================================================
--- KHAIR HOSPITAL - CLOUD DATABASE SCHEMA
--- Copy and run this script in SQL Editor Console
--- Fully Idempotent DDL - Resolves Security & Function Constraints
--- ============================================================
 
--- Enable pgcrypto extension for gen_random_uuid() support
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
--- Drop legacy function with CASCADE so event triggers won't block execution
-DROP FUNCTION IF EXISTS public.rls_auto_enable() CASCADE;
-
--- ============================================================
--- 1. DOCTORS TABLE
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.doctors (
-  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  name TEXT NOT NULL,
-  qualification TEXT,
-  department TEXT NOT NULL,
-  specialization TEXT,
-  experience TEXT,
-  image TEXT,
-  opd_schedule TEXT,
-  fee NUMERIC DEFAULT 0,
-  phone TEXT,
-  status TEXT DEFAULT 'Active',
-  bio TEXT,
-  room_no TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.doctors ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow public read access on doctors" ON public.doctors;
-DROP POLICY IF EXISTS "Allow public insert/update/delete on doctors" ON public.doctors;
-DROP POLICY IF EXISTS "Allow public full access on doctors" ON public.doctors;
-DROP POLICY IF EXISTS "Enable read access for all users on doctors" ON public.doctors;
-DROP POLICY IF EXISTS "Enable insert access for all users on doctors" ON public.doctors;
-DROP POLICY IF EXISTS "Enable update access for all users on doctors" ON public.doctors;
-DROP POLICY IF EXISTS "Enable delete access for all users on doctors" ON public.doctors;
-
-CREATE POLICY "Enable read access for all users on doctors" ON public.doctors FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users on doctors" ON public.doctors FOR INSERT WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable update access for all users on doctors" ON public.doctors FOR UPDATE USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable delete access for all users on doctors" ON public.doctors FOR DELETE USING (id IS NOT NULL);
-
--- ============================================================
--- 2. EMPLOYEES TABLE
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.employees (
-  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  employee_id TEXT UNIQUE,
-  name TEXT NOT NULL,
-  designation TEXT,
-  department TEXT,
-  phone TEXT,
-  email TEXT,
-  join_date TEXT,
-  shift TEXT DEFAULT 'General',
-  status TEXT DEFAULT 'Active',
-  password TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow public read access on employees" ON public.employees;
-DROP POLICY IF EXISTS "Allow public insert/update/delete on employees" ON public.employees;
-DROP POLICY IF EXISTS "Allow public full access on employees" ON public.employees;
-DROP POLICY IF EXISTS "Enable read access for all users on employees" ON public.employees;
-DROP POLICY IF EXISTS "Enable insert access for all users on employees" ON public.employees;
-DROP POLICY IF EXISTS "Enable update access for all users on employees" ON public.employees;
-DROP POLICY IF EXISTS "Enable delete access for all users on employees" ON public.employees;
-
-CREATE POLICY "Enable read access for all users on employees" ON public.employees FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users on employees" ON public.employees FOR INSERT WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable update access for all users on employees" ON public.employees FOR UPDATE USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable delete access for all users on employees" ON public.employees FOR DELETE USING (id IS NOT NULL);
-
--- ============================================================
--- 3. NOTICES TABLE
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.notices (
-  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  title TEXT NOT NULL,
-  category TEXT,
-  date TEXT,
-  content TEXT,
-  is_pinned BOOLEAN DEFAULT false,
-  priority TEXT DEFAULT 'Normal',
-  target_audience TEXT DEFAULT 'All Patients & Visitors',
-  doc_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.notices ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow public read access on notices" ON public.notices;
-DROP POLICY IF EXISTS "Allow public insert/update/delete on notices" ON public.notices;
-DROP POLICY IF EXISTS "Allow public full access on notices" ON public.notices;
-DROP POLICY IF EXISTS "Enable read access for all users on notices" ON public.notices;
-DROP POLICY IF EXISTS "Enable insert access for all users on notices" ON public.notices;
-DROP POLICY IF EXISTS "Enable update access for all users on notices" ON public.notices;
-DROP POLICY IF EXISTS "Enable delete access for all users on notices" ON public.notices;
-
-CREATE POLICY "Enable read access for all users on notices" ON public.notices FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users on notices" ON public.notices FOR INSERT WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable update access for all users on notices" ON public.notices FOR UPDATE USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable delete access for all users on notices" ON public.notices FOR DELETE USING (id IS NOT NULL);
-
--- ============================================================
--- 4. EVENTS TABLE
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.events (
-  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  title TEXT NOT NULL,
-  date TEXT,
-  location TEXT,
-  description TEXT,
-  organizer TEXT,
-  max_seats INTEGER DEFAULT 100,
-  registered_count INTEGER DEFAULT 0,
-  status TEXT DEFAULT 'Upcoming',
-  image_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow public read access on events" ON public.events;
-DROP POLICY IF EXISTS "Allow public insert/update/delete on events" ON public.events;
-DROP POLICY IF EXISTS "Allow public full access on events" ON public.events;
-DROP POLICY IF EXISTS "Enable read access for all users on events" ON public.events;
-DROP POLICY IF EXISTS "Enable insert access for all users on events" ON public.events;
-DROP POLICY IF EXISTS "Enable update access for all users on events" ON public.events;
-DROP POLICY IF EXISTS "Enable delete access for all users on events" ON public.events;
-
-CREATE POLICY "Enable read access for all users on events" ON public.events FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users on events" ON public.events FOR INSERT WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable update access for all users on events" ON public.events FOR UPDATE USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable delete access for all users on events" ON public.events FOR DELETE USING (id IS NOT NULL);
-
--- ============================================================
--- 5. GALLERY TABLE
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.gallery (
-  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  title TEXT NOT NULL,
-  category TEXT,
-  image_url TEXT,
-  caption TEXT,
-  date TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.gallery ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow public read access on gallery" ON public.gallery;
-DROP POLICY IF EXISTS "Allow public insert/update/delete on gallery" ON public.gallery;
-DROP POLICY IF EXISTS "Allow public full access on gallery" ON public.gallery;
-DROP POLICY IF EXISTS "Enable read access for all users on gallery" ON public.gallery;
-DROP POLICY IF EXISTS "Enable insert access for all users on gallery" ON public.gallery;
-DROP POLICY IF EXISTS "Enable update access for all users on gallery" ON public.gallery;
-DROP POLICY IF EXISTS "Enable delete access for all users on gallery" ON public.gallery;
-
-CREATE POLICY "Enable read access for all users on gallery" ON public.gallery FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users on gallery" ON public.gallery FOR INSERT WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable update access for all users on gallery" ON public.gallery FOR UPDATE USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable delete access for all users on gallery" ON public.gallery FOR DELETE USING (id IS NOT NULL);
-
--- ============================================================
--- 6. FEEDBACKS TABLE
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.feedbacks (
-  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  patient_name TEXT NOT NULL,
-  email TEXT,
-  phone TEXT,
-  department TEXT,
-  rating INTEGER DEFAULT 5,
-  message TEXT,
-  date TEXT,
-  status TEXT DEFAULT 'Pending',
-  admin_notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.feedbacks ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow public read access on feedbacks" ON public.feedbacks;
-DROP POLICY IF EXISTS "Allow public insert/update/delete on feedbacks" ON public.feedbacks;
-DROP POLICY IF EXISTS "Allow public full access on feedbacks" ON public.feedbacks;
-DROP POLICY IF EXISTS "Enable read access for all users on feedbacks" ON public.feedbacks;
-DROP POLICY IF EXISTS "Enable insert access for all users on feedbacks" ON public.feedbacks;
-DROP POLICY IF EXISTS "Enable update access for all users on feedbacks" ON public.feedbacks;
-DROP POLICY IF EXISTS "Enable delete access for all users on feedbacks" ON public.feedbacks;
-
-CREATE POLICY "Enable read access for all users on feedbacks" ON public.feedbacks FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users on feedbacks" ON public.feedbacks FOR INSERT WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable update access for all users on feedbacks" ON public.feedbacks FOR UPDATE USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable delete access for all users on feedbacks" ON public.feedbacks FOR DELETE USING (id IS NOT NULL);
-
--- ============================================================
--- 7. APPOINTMENTS TABLE
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.appointments (
-  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  appointment_number TEXT UNIQUE,
-  patient_name TEXT NOT NULL,
-  age INTEGER,
-  gender TEXT,
-  phone TEXT,
-  email TEXT,
-  department TEXT,
-  doctor_id TEXT,
-  doctor_name TEXT,
-  date TEXT,
-  time_slot TEXT,
-  status TEXT DEFAULT 'Confirmed',
-  symptoms TEXT,
-  communication_logs JSONB DEFAULT '[]'::jsonb,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow public read access on appointments" ON public.appointments;
-DROP POLICY IF EXISTS "Allow public insert/update/delete on appointments" ON public.appointments;
-DROP POLICY IF EXISTS "Allow public full access on appointments" ON public.appointments;
-DROP POLICY IF EXISTS "Enable read access for all users on appointments" ON public.appointments;
-DROP POLICY IF EXISTS "Enable insert access for all users on appointments" ON public.appointments;
-DROP POLICY IF EXISTS "Enable update access for all users on appointments" ON public.appointments;
-DROP POLICY IF EXISTS "Enable delete access for all users on appointments" ON public.appointments;
-
-CREATE POLICY "Enable read access for all users on appointments" ON public.appointments FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users on appointments" ON public.appointments FOR INSERT WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable update access for all users on appointments" ON public.appointments FOR UPDATE USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
-CREATE POLICY "Enable delete access for all users on appointments" ON public.appointments FOR DELETE USING (id IS NOT NULL);
-
--- ============================================================
--- 8. HOSPITAL SETTINGS TABLE
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.hospital_settings (
-  key TEXT PRIMARY KEY,
-  value JSONB NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.hospital_settings ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow public read access on hospital_settings" ON public.hospital_settings;
-DROP POLICY IF EXISTS "Allow public insert/update/delete on hospital_settings" ON public.hospital_settings;
-DROP POLICY IF EXISTS "Allow public full access on hospital_settings" ON public.hospital_settings;
-DROP POLICY IF EXISTS "Enable read access for all users on hospital_settings" ON public.hospital_settings;
-DROP POLICY IF EXISTS "Enable insert access for all users on hospital_settings" ON public.hospital_settings;
-DROP POLICY IF EXISTS "Enable update access for all users on hospital_settings" ON public.hospital_settings;
-DROP POLICY IF EXISTS "Enable delete access for all users on hospital_settings" ON public.hospital_settings;
-
-CREATE POLICY "Enable read access for all users on hospital_settings" ON public.hospital_settings FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users on hospital_settings" ON public.hospital_settings FOR INSERT WITH CHECK (key IS NOT NULL);
-CREATE POLICY "Enable update access for all users on hospital_settings" ON public.hospital_settings FOR UPDATE USING (key IS NOT NULL) WITH CHECK (key IS NOT NULL);
-CREATE POLICY "Enable delete access for all users on hospital_settings" ON public.hospital_settings FOR DELETE USING (key IS NOT NULL);`;
-
-  const copySqlToClipboard = () => {
-    navigator.clipboard.writeText(supabaseSqlScript);
-    setShowSqlCopied(true);
-    setTimeout(() => setShowSqlCopied(false), 3000);
-  };
 
   // Business Form State
   const [bizForm, setBizForm] = useState({ ...businessSettings });
@@ -302,30 +33,6 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
   useEffect(() => {
     setLogoForm({ ...logoSettings });
   }, [logoSettings]);
-
-  // Slider Modal / Form State
-  const [isAddingSlider, setIsAddingSlider] = useState(false);
-  const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
-
-  const initialSlideState: Omit<SliderSetting, 'id'> = {
-    tagline: 'Multi-Specialty & Healthcare',
-    title: 'KHAIR HOSPITAL',
-    highlightText: 'Advanced Care',
-    hindiSlogan: 'आपकी सेहत, हमारी प्राथमिकता',
-    description: 'Providing world-class medical treatment and compassionate care in Basti.',
-    bgImage: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=1600',
-    badge: 'Specialty Services',
-    leftList: ['24x7 Emergency', 'Modern Modular OT'],
-    rightList: ['Expert Doctors', 'ICU & Trauma Unit'],
-    serviceBox: ['OPD Services', 'IPD Services', 'Pathology'],
-    accentColor: 'from-emerald-600 to-teal-700',
-    isActive: true
-  };
-
-  const [slideForm, setSlideForm] = useState<Omit<SliderSetting, 'id'>>(initialSlideState);
-  const [leftListText, setLeftListText] = useState('');
-  const [rightListText, setRightListText] = useState('');
-  const [serviceBoxText, setServiceBoxText] = useState('');
 
   const showNotification = (msg: string) => {
     setSuccessMessage(msg);
@@ -352,76 +59,6 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
     e.preventDefault();
     updateLogoSettings(logoForm);
     showNotification('Logo and brand settings updated successfully!');
-  };
-
-  // Open Edit Slide Modal
-  const openEditSlide = (slide: SliderSetting) => {
-    setEditingSlideId(slide.id);
-    setSlideForm({
-      tagline: slide.tagline,
-      title: slide.title,
-      highlightText: slide.highlightText || '',
-      hindiSlogan: slide.hindiSlogan || '',
-      description: slide.description || '',
-      bgImage: slide.bgImage,
-      badge: slide.badge,
-      leftList: slide.leftList || [],
-      rightList: slide.rightList || [],
-      serviceBox: slide.serviceBox || [],
-      accentColor: slide.accentColor,
-      isActive: slide.isActive
-    });
-    setLeftListText((slide.leftList || []).join('\n'));
-    setRightListText((slide.rightList || []).join('\n'));
-    setServiceBoxText((slide.serviceBox || []).join('\n'));
-    setIsAddingSlider(true);
-  };
-
-  // Move slide up or down
-  const moveSlide = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === sliderSettings.length - 1) return;
-
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    const newSlides = [...sliderSettings];
-    const temp = newSlides[index];
-    newSlides[index] = newSlides[targetIndex];
-    newSlides[targetIndex] = temp;
-
-    reorderSliders(newSlides);
-    showNotification('Banner order updated successfully!');
-  };
-
-  // Save Slider
-  const handleSaveSlide = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!editingSlideId && sliderSettings.length >= 4) {
-      alert('Maximum 4 hero banners allowed. Please edit or replace an existing banner.');
-      return;
-    }
-
-    const leftArr = leftListText.split('\n').map(s => s.trim()).filter(Boolean);
-    const rightArr = rightListText.split('\n').map(s => s.trim()).filter(Boolean);
-    const serviceArr = serviceBoxText.split('\n').map(s => s.trim()).filter(Boolean);
-
-    const payload = {
-      ...slideForm,
-      leftList: leftArr.length > 0 ? leftArr : undefined,
-      rightList: rightArr.length > 0 ? rightArr : undefined,
-      serviceBox: serviceArr.length > 0 ? serviceArr : undefined
-    };
-
-    if (editingSlideId) {
-      updateSlider(editingSlideId, payload);
-      showNotification('Hero banner updated successfully!');
-    } else {
-      addSlider(payload);
-      showNotification('New hero slider banner added successfully!');
-    }
-
-    setIsAddingSlider(false);
-    setEditingSlideId(null);
   };
 
   return (
@@ -458,7 +95,10 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            Hero Sliders
+            <span>Hero Sliders</span>
+            <span className="bg-amber-400 text-slate-950 text-[10px] font-extrabold px-1.5 py-0.5 rounded-xs ml-1 flex items-center gap-1">
+              <Lock className="w-2.5 h-2.5" /> Static
+            </span>
           </button>
           <button
             onClick={() => setActiveSubTab('logo')}
@@ -469,15 +109,6 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
             <ImageIcon className="w-3.5 h-3.5" />
             Logo & Brand
           </button>
-          <button
-            onClick={() => setActiveSubTab('database')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xs text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
-              activeSubTab === 'database' ? 'bg-white text-emerald-900' : 'text-emerald-200 hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Cloud Database
-          </button>
         </div>
       </div>
 
@@ -487,77 +118,6 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>{successMessage}</span>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: CLOUD DATABASE & SCHEMA */}
-      {activeSubTab === 'database' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-xs border border-slate-200 p-6 shadow-xs space-y-5">
-            <div className="border-b border-slate-100 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div>
-                <h3 className="font-serif font-bold text-lg text-slate-900 flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-emerald-700" />
-                  Hospital Cloud Database Status
-                </h3>
-                <p className="text-xs text-slate-500">Live multi-device database synchronization & RLS security configuration.</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
-                  isSupabaseConnected ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'
-                }`}>
-                  <span className={`w-2 h-2 rounded-full ${isSupabaseConnected ? 'bg-emerald-600 animate-pulse' : 'bg-amber-600'}`} />
-                  {isSupabaseConnected ? 'Connected & Synced' : 'Ready / Standing By'}
-                </span>
-                <button
-                  onClick={copySqlToClipboard}
-                  className="bg-emerald-900 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xs shadow-xs transition cursor-pointer flex items-center gap-1.5"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  {showSqlCopied ? 'Copied SQL Script!' : 'Copy SQL DDL Script'}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="bg-slate-50 border border-slate-200 rounded-xs p-4 space-y-2">
-                <span className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">Cloud Database Endpoint</span>
-                <code className="bg-white border border-slate-300 px-3 py-1.5 rounded-xs block font-mono text-emerald-900 font-bold overflow-x-auto">
-                  https://fgkfkktuxbunvawerllm.supabase.co
-                </code>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 rounded-xs p-4 space-y-2">
-                <span className="font-bold text-slate-700 uppercase text-[10px] tracking-wider block">Publishable API Key</span>
-                <code className="bg-white border border-slate-300 px-3 py-1.5 rounded-xs block font-mono text-slate-800 overflow-x-auto">
-                  sb_publishable_svpR6q_BvmoBaGhWoHPpCw_FC_iqg5V
-                </code>
-              </div>
-            </div>
-
-            <div className="border-t border-slate-100 pt-4 space-y-3">
-              <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Synced Database Tables</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                {['doctors', 'employees', 'notices', 'events', 'gallery', 'feedbacks', 'appointments', 'hospital_settings'].map((tbl) => (
-                  <div key={tbl} className="bg-emerald-50/50 border border-emerald-200 rounded-xs p-3 flex items-center justify-between">
-                    <span className="font-bold font-mono text-emerald-950">{tbl}</span>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-xs p-4 text-xs text-amber-900 space-y-2">
-              <div className="font-bold flex items-center gap-1.5 text-amber-950">
-                <AlertCircle className="w-4 h-4 text-amber-700" />
-                Row Level Security (RLS) Policy
-              </div>
-              <p>
-                All 8 hospital tables have Row Level Security enabled. Click <strong>"Copy SQL DDL Script"</strong> above and paste into the Database Console SQL Editor if you ever need to reset or run migrations manually.
-              </p>
-            </div>
           </div>
         </div>
       )}
@@ -827,108 +387,80 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
         </form>
       )}
 
-      {/* TAB 2: HERO SLIDER SETTINGS */}
+      {/* TAB 2: HERO SLIDER SETTINGS (LOCKED IN STATIC MODE TILL NEXT COMMAND) */}
       {activeSubTab === 'slider' && (
         <div className="space-y-6">
+          {/* Static Mode Information Alert */}
+          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xs shadow-xs space-y-2">
+            <div className="flex items-center gap-2 text-amber-950 font-bold text-sm">
+              <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>Static Banners Active & Provision for Changing Banners Inactive (Till Next Command)</span>
+            </div>
+            <p className="text-xs text-amber-900 leading-relaxed">
+              As commanded, all 4 hero banners presently uploaded have been made permanent static banners. The provision for uploading new banners, editing titles/slogans/images, reordering, deleting, or toggling visibility has been made inactive until the next command.
+            </p>
+          </div>
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-xs border border-slate-200 shadow-xs">
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-serif font-bold text-base text-slate-900">Hero Slider Banners</h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                  sliderSettings.length >= 4 ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                }`}>
-                  {sliderSettings.length} / 4 Configured
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-emerald-700" /> 4 Static Banners Active
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                  Changing Inactive
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Upload up to 4 banner images and customize slogans, highlights, and bullet points for the homepage slider.
+                The 4 hospital banners below are permanently loaded on the homepage in static presentation mode.
               </p>
             </div>
 
-            {sliderSettings.length < 4 ? (
-              <button
-                onClick={() => {
-                  setEditingSlideId(null);
-                  setSlideForm(initialSlideState);
-                  setLeftListText(initialSlideState.leftList?.join('\n') || '');
-                  setRightListText(initialSlideState.rightList?.join('\n') || '');
-                  setServiceBoxText(initialSlideState.serviceBox?.join('\n') || '');
-                  setIsAddingSlider(true);
-                }}
-                className="bg-emerald-900 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xs shadow-xs transition cursor-pointer flex items-center gap-1.5 shrink-0"
-              >
-                <Plus className="w-4 h-4" /> Add Banner ({sliderSettings.length + 1}/4)
-              </button>
-            ) : (
-              <div className="text-xs font-bold text-amber-800 bg-amber-50 px-3 py-2 rounded-xs border border-amber-200 flex items-center gap-1.5 shrink-0">
-                <AlertCircle className="w-4 h-4 text-amber-600" /> Max 4 Banners Active
-              </div>
-            )}
+            <button
+              disabled
+              className="bg-slate-100 text-slate-400 font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xs border border-slate-300 shadow-none cursor-not-allowed flex items-center gap-1.5 shrink-0"
+              title="Banner addition is inactive till next command"
+            >
+              <Lock className="w-4 h-4 text-slate-400" /> Add Banner (Inactive)
+            </button>
           </div>
 
-          {/* Slider Cards Grid */}
+          {/* Static Slider Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {sliderSettings.map((slide, idx) => (
               <div
                 key={slide.id}
-                className={`bg-white rounded-xs border transition shadow-xs overflow-hidden flex flex-col justify-between ${
-                  slide.isActive ? 'border-slate-300' : 'border-slate-200 opacity-75'
-                }`}
+                className="bg-white rounded-xs border border-slate-300 transition shadow-xs overflow-hidden flex flex-col justify-between"
               >
-                {/* Banner Header & Order Controls */}
+                {/* Banner Header & Locked Status */}
                 <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="bg-emerald-900 text-white font-bold text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded-xs">
-                      Banner #{idx + 1}
+                      Static Banner #{idx + 1}
                     </span>
                     <span className="text-xs font-bold text-slate-700 truncate max-w-[180px]">
                       {slide.title}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1">
-                    {/* Move Up */}
-                    <button
-                      onClick={() => moveSlide(idx, 'up')}
-                      disabled={idx === 0}
-                      className="p-1.5 rounded-xs bg-white hover:bg-slate-200 border border-slate-300 text-slate-700 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-                      title="Move Up"
-                    >
-                      <ArrowUp className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* Move Down */}
-                    <button
-                      onClick={() => moveSlide(idx, 'down')}
-                      disabled={idx === sliderSettings.length - 1}
-                      className="p-1.5 rounded-xs bg-white hover:bg-slate-200 border border-slate-300 text-slate-700 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-                      title="Move Down"
-                    >
-                      <ArrowDown className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* Visibility Toggle */}
-                    <button
-                      onClick={() => toggleSliderStatus(slide.id)}
-                      className={`px-2.5 py-1 rounded-xs text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer border ${
-                        slide.isActive ? 'bg-emerald-700 text-white border-emerald-800' : 'bg-slate-700 text-slate-200 border-slate-800'
-                      }`}
-                    >
-                      {slide.isActive ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                      {slide.isActive ? 'Active' : 'Hidden'}
-                    </button>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2.5 py-1 rounded-xs text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-800 text-white border border-emerald-900 shadow-2xs">
+                      <Lock className="w-3 h-3 text-amber-300" /> Active (Static)
+                    </span>
                   </div>
                 </div>
 
-                {/* Banner Image Preview - 100% Clear, Bright & Sharp */}
-                <div className="relative h-48 bg-slate-100 overflow-hidden border-b border-slate-200">
+                {/* Banner Image Preview - 100% Clear & Sharp */}
+                <div className="relative h-48 bg-slate-900 overflow-hidden border-b border-slate-200">
                   <img
                     src={slide.bgImage}
                     alt={slide.title}
-                    className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
+                    className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-2 right-2 bg-slate-900/80 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-xs">
-                    {slide.badge}
+                  <div className="absolute top-2 right-2 bg-slate-900/85 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-xs flex items-center gap-1 border border-white/20">
+                    <Lock className="w-2.5 h-2.5 text-amber-400" />
+                    <span>{slide.badge}</span>
                   </div>
                 </div>
 
@@ -947,19 +479,15 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
                   )}
                 </div>
 
-                {/* Direct File Upload Component for Quick Image Change */}
-                <div className="p-4 bg-slate-50 border-t border-b border-slate-200 space-y-2">
-                  <FileUploadInput
-                    label="📷 Quick Upload / Change Banner Image"
-                    value={slide.bgImage}
-                    onChange={(newVal) => {
-                      if (newVal) {
-                        updateSlider(slide.id, { bgImage: newVal });
-                        showNotification(`Banner #${idx + 1} image changed successfully!`);
-                      }
-                    }}
-                    helpText="Upload a JPG/PNG file or paste image URL to instantly update this banner."
-                  />
+                {/* Static Banner Notice replacing Upload Control */}
+                <div className="p-3.5 bg-slate-50 border-t border-b border-slate-200 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
+                    <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>Image locked as static: <span className="font-semibold text-slate-900">Static Banner #{idx + 1}</span></span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-xs bg-amber-100 text-amber-900 border border-amber-300">
+                    Upload Inactive
+                  </span>
                 </div>
 
                 {/* Details Summary */}
@@ -971,221 +499,62 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
                     </span>
                   </div>
 
+                  {slide.hindiSlogan && (
+                    <div className="p-2 bg-emerald-50/70 border-l-2 border-emerald-600 rounded-r-xs text-emerald-950 font-serif text-[11px] italic">
+                      "{slide.hindiSlogan}"
+                    </div>
+                  )}
+
                   {slide.description && (
                     <p className="text-slate-600 line-clamp-2 text-[11px] leading-relaxed">
                       {slide.description}
                     </p>
                   )}
+
+                  {slide.leftList && slide.rightList && (
+                    <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px] text-slate-700 font-medium">
+                      {slide.leftList.slice(0, 2).map((item, i) => (
+                        <div key={i} className="truncate">• {item}</div>
+                      ))}
+                      {slide.rightList.slice(0, 2).map((item, i) => (
+                        <div key={i} className="truncate">• {item}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {slide.serviceBox && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {slide.serviceBox.map((srv, i) => (
+                        <span key={i} className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-xs font-semibold text-slate-700">
+                          {srv}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* Card Actions Footer */}
+                {/* Card Actions Footer - Made Inactive */}
                 <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between">
                   <button
-                    onClick={() => openEditSlide(slide)}
-                    className="bg-emerald-900 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-wider px-3 py-1.5 rounded-xs shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                    disabled
+                    className="bg-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider px-3 py-1.5 rounded-xs border border-slate-300 cursor-not-allowed flex items-center gap-1.5"
+                    title="Banner editing is inactive till next command"
                   >
-                    <Edit3 className="w-3.5 h-3.5" /> Edit Full Details
+                    <Lock className="w-3.5 h-3.5 text-slate-400" /> Edit Details (Inactive)
                   </button>
 
                   <button
-                    onClick={() => {
-                      if (confirm(`Are you sure you want to delete Banner #${idx + 1}?`)) {
-                        deleteSlider(slide.id);
-                        showNotification(`Banner #${idx + 1} deleted.`);
-                      }
-                    }}
-                    className="text-rose-600 hover:text-rose-800 p-1.5 rounded-xs hover:bg-rose-50 transition cursor-pointer flex items-center gap-1 text-xs font-bold"
-                    title="Delete Banner"
+                    disabled
+                    className="text-slate-400 p-1.5 rounded-xs cursor-not-allowed flex items-center gap-1 text-xs font-bold"
+                    title="Banner deletion is inactive till next command"
                   >
-                    <Trash2 className="w-4 h-4" /> Delete
+                    <Lock className="w-3.5 h-3.5 text-slate-400" /> Delete (Inactive)
                   </button>
                 </div>
               </div>
             ))}
-
-            {/* Empty Slots up to 4 */}
-            {Array.from({ length: Math.max(0, 4 - sliderSettings.length) }).map((_, emptyIdx) => {
-              const slotNumber = sliderSettings.length + emptyIdx + 1;
-              return (
-                <div
-                  key={`empty-slot-${slotNumber}`}
-                  className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-xs p-8 flex flex-col items-center justify-center text-center space-y-3 min-h-[320px]"
-                >
-                  <div className="w-12 h-12 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center">
-                    <ImageIcon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="font-serif font-bold text-slate-700 text-base">
-                      Banner Slot #{slotNumber} (Available)
-                    </h4>
-                    <p className="text-xs text-slate-500 max-w-xs mt-1">
-                      Upload a new hero banner image and set title & details for Slot #{slotNumber}.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setEditingSlideId(null);
-                      setSlideForm({
-                        ...initialSlideState,
-                        title: 'KHAIR HOSPITAL'
-                      });
-                      setLeftListText(initialSlideState.leftList?.join('\n') || '');
-                      setRightListText(initialSlideState.rightList?.join('\n') || '');
-                      setServiceBoxText(initialSlideState.serviceBox?.join('\n') || '');
-                      setIsAddingSlider(true);
-                    }}
-                    className="bg-emerald-900 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xs shadow-xs transition cursor-pointer flex items-center gap-1.5 mt-2"
-                  >
-                    <Plus className="w-4 h-4" /> Add Banner for Slot #{slotNumber}
-                  </button>
-                </div>
-              );
-            })}
           </div>
 
-          {/* Add / Edit Slide Modal */}
-          {isAddingSlider && (
-            <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-              <div className="bg-white rounded-xs border border-slate-200 max-w-2xl w-full p-6 space-y-5 shadow-2xl my-8">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <h3 className="font-serif font-bold text-lg text-slate-900">
-                    {editingSlideId ? 'Edit Hero Banner' : 'Create New Hero Banner'}
-                  </h3>
-                  <button
-                    onClick={() => setIsAddingSlider(false)}
-                    className="text-slate-400 hover:text-slate-700 text-sm font-bold cursor-pointer"
-                  >
-                    ✕ Close
-                  </button>
-                </div>
-
-                <form onSubmit={handleSaveSlide} className="space-y-4 text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Banner Title</label>
-                      <input
-                        type="text"
-                        value={slideForm.title}
-                        onChange={e => setSlideForm({ ...slideForm, title: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xs focus:ring-2 focus:ring-emerald-600 focus:outline-hidden font-bold"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Tagline</label>
-                      <input
-                        type="text"
-                        value={slideForm.tagline}
-                        onChange={e => setSlideForm({ ...slideForm, tagline: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xs focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Highlight Heading</label>
-                      <input
-                        type="text"
-                        value={slideForm.highlightText || ''}
-                        onChange={e => setSlideForm({ ...slideForm, highlightText: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xs focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Badge Text</label>
-                      <input
-                        type="text"
-                        value={slideForm.badge}
-                        onChange={e => setSlideForm({ ...slideForm, badge: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xs focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <FileUploadInput
-                    label="Hero Banner Background Image (Upload JPG / PNG or URL)"
-                    value={slideForm.bgImage}
-                    onChange={(val) => setSlideForm({ ...slideForm, bgImage: val })}
-                    required
-                    helpText="Upload banner image (JPG, PNG, WEBP) or enter image URL."
-                  />
-
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Hindi Slogan (Optional)</label>
-                    <input
-                      type="text"
-                      value={slideForm.hindiSlogan || ''}
-                      onChange={e => setSlideForm({ ...slideForm, hindiSlogan: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xs focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Banner Description</label>
-                    <textarea
-                      rows={2}
-                      value={slideForm.description || ''}
-                      onChange={e => setSlideForm({ ...slideForm, description: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xs focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Left Bullet Items (1 per line)</label>
-                      <textarea
-                        rows={3}
-                        value={leftListText}
-                        onChange={e => setLeftListText(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xs focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-slate-700 uppercase tracking-wider mb-1">Right Bullet Items (1 per line)</label>
-                      <textarea
-                        rows={3}
-                        value={rightListText}
-                        onChange={e => setRightListText(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-xs focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                    <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={slideForm.isActive}
-                        onChange={e => setSlideForm({ ...slideForm, isActive: e.target.checked })}
-                        className="w-4 h-4 text-emerald-600 rounded-xs"
-                      />
-                      Active on Homepage
-                    </label>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingSlider(false)}
-                        className="px-4 py-2 border border-slate-300 rounded-xs text-slate-700 font-bold uppercase tracking-wider hover:bg-slate-50 cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="bg-emerald-900 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-wider px-5 py-2 rounded-xs shadow-xs transition cursor-pointer flex items-center gap-1.5"
-                      >
-                        <Save className="w-4 h-4" /> Save Banner
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -1288,8 +657,8 @@ CREATE POLICY "Enable delete access for all users on hospital_settings" ON publi
                 )}
                 {logoForm.showTextNextToLogo && (
                   <div>
-                    <h1 className="text-xl font-serif font-bold tracking-tight text-emerald-900">
-                      {bizForm.hospitalName}
+                    <h1 className="text-xl font-serif font-extrabold tracking-tight">
+                      <HospitalBrandName name={bizForm.hospitalName} />
                     </h1>
                     <p className="text-[10px] text-slate-500 font-semibold tracking-widest uppercase">
                       {bizForm.tagline}

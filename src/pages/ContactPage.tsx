@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useHospital } from '../context/HospitalContext';
-import { Phone, Mail, MapPin, Clock, Send, CheckCircle2, MessageSquare, ExternalLink, Navigation } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Send, CheckCircle2, MessageSquare, ExternalLink, Navigation, Star } from 'lucide-react';
 
 export const ContactPage: React.FC = () => {
   const { addFeedback, departments, businessSettings } = useHospital();
@@ -9,7 +9,7 @@ export const ContactPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [department, setDepartment] = useState('General Inquiry');
-  const [rating] = useState<number>(5);
+  const [rating, setRating] = useState<number>(5);
   const [message, setMessage] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -30,6 +30,7 @@ export const ContactPage: React.FC = () => {
     setPatientName('');
     setEmail('');
     setPhone('');
+    setRating(5);
     setMessage('');
   };
 
@@ -243,6 +244,34 @@ export const ContactPage: React.FC = () => {
                       <option key={d.id} value={d.name}>{d.name}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1.5">
+                  Experience Rating *
+                </label>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5">
+                  {[1, 2, 3, 4, 5].map((starValue) => (
+                    <button
+                      key={starValue}
+                      type="button"
+                      onClick={() => setRating(starValue)}
+                      className="p-0.5 cursor-pointer transition hover:scale-110"
+                      aria-label={`Rate ${starValue} out of 5 stars`}
+                    >
+                      <Star
+                        className={`w-5 h-5 ${
+                          starValue <= rating
+                            ? 'text-amber-500 fill-amber-400'
+                            : 'text-slate-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="ml-2 text-xs font-semibold text-slate-600">
+                    {rating} / 5 {rating === 5 ? '(Excellent)' : rating === 4 ? '(Very Good)' : rating === 3 ? '(Good)' : rating === 2 ? '(Fair)' : '(Needs Improvement)'}
+                  </span>
                 </div>
               </div>
 

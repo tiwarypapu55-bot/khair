@@ -8,6 +8,7 @@ import { EmployeeLoginModal } from './components/EmployeeLoginModal';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { EmployeePortal } from './components/EmployeePortal';
 import { CodeProtectionGuard } from './components/CodeProtectionGuard';
+import { SyncNotificationToast } from './components/SyncNotificationToast';
 
 // Public Pages
 import { HomePage } from './pages/HomePage';
@@ -21,6 +22,7 @@ import { ContactPage } from './pages/ContactPage';
 // Admin System Pages
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminHome } from './pages/admin/AdminHome';
+import { AdminDepartments } from './pages/admin/AdminDepartments';
 import { AdminDoctors } from './pages/admin/AdminDoctors';
 import { AdminEmployees } from './pages/admin/AdminEmployees';
 import { AdminGallery } from './pages/admin/AdminGallery';
@@ -45,6 +47,7 @@ const MainContent: React.FC = () => {
     return (
       <AdminLayout>
         {adminTab === 'home' && <AdminHome />}
+        {adminTab === 'departments' && <AdminDepartments />}
         {adminTab === 'doctor-list' && <AdminDoctors />}
         {adminTab === 'employee' && <AdminEmployees />}
         {adminTab === 'gallery' && <AdminGallery />}
@@ -85,6 +88,7 @@ export default function App() {
     <HospitalProvider>
       <CodeProtectionGuard>
         <MainContent />
+        <SyncNotificationToast />
       </CodeProtectionGuard>
     </HospitalProvider>
   );

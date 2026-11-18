@@ -1,16 +1,17 @@
 import React from 'react';
 import { useHospital } from '../context/HospitalContext';
 import { KhairLogo } from './KhairLogo';
+import { HospitalBrandName } from './HospitalBrandName';
+import { SyncStatusBadge } from './SyncStatusBadge';
 import {
-  Phone, Clock, MapPin, ShieldAlert, Calendar, LayoutDashboard,
-  Menu, X, HeartPulse, Stethoscope, Award, Megaphone, UserCheck, ShieldCheck
+  Clock, MapPin, ShieldAlert, Calendar,
+  Menu, X, Megaphone
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const {
-    currentTab, setCurrentTab, setIsAdminMode, setIsAppointmentModalOpen,
-    businessSettings, logoSettings, flashAnnouncement, setIsFlashModalOpen,
-    setIsEmployeeModalOpen, loggedInEmployee, setIsEmployeePortalOpen
+    currentTab, setCurrentTab, setIsAppointmentModalOpen,
+    businessSettings, logoSettings, flashAnnouncement, setIsFlashModalOpen
   } = useHospital();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
@@ -91,36 +92,10 @@ export const Header: React.FC = () => {
                 Ayushman Bharat Empaneled
               </span>
             )}
-            {loggedInEmployee ? (
-              <button
-                onClick={() => setIsEmployeePortalOpen(true)}
-                className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1 rounded-xs font-extrabold uppercase text-[11px] tracking-wider transition cursor-pointer shadow-xs"
-                title={`Open Staff Portal (${loggedInEmployee.name})`}
-              >
-                <UserCheck className="w-3.5 h-3.5 text-slate-950" />
-                <span>Staff Portal ({loggedInEmployee.name.split(' ')[0]})</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => setIsEmployeeModalOpen(true)}
-                className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-950 text-emerald-300 px-3 py-1 rounded-xs font-extrabold uppercase text-[11px] tracking-wider transition cursor-pointer shadow-xs border border-emerald-800/60"
-                title="Employee Login with Password"
-              >
-                <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Employee Login</span>
-              </button>
-            )}
 
-            <button
-              onClick={() => {
-                setIsAdminMode(true);
-              }}
-              className="flex items-center gap-1.5 bg-emerald-900 hover:bg-emerald-950 text-white px-3 py-1 rounded-xs font-extrabold uppercase text-[11px] tracking-wider transition cursor-pointer shadow-xs"
-              title="Open Hospital Admin Panel"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              Admin Portal
-            </button>
+            <div className="hidden sm:block">
+              <SyncStatusBadge variant="pill" className="bg-white/80 text-slate-800 border-[#7fa4c9]" />
+            </div>
           </div>
         </div>
       </div>
@@ -140,10 +115,10 @@ export const Header: React.FC = () => {
 
           {logoSettings.showTextNextToLogo && (
             <div>
-              <h1 className="text-2xl font-serif font-bold tracking-tight text-emerald-900 flex items-center gap-1">
-                {businessSettings.hospitalName}
+              <h1 className="text-2xl font-serif font-extrabold tracking-tight flex items-center gap-1">
+                <HospitalBrandName name={businessSettings.hospitalName} />
               </h1>
-              <p className="text-[10px] text-slate-500 font-semibold tracking-widest uppercase">
+              <p className="text-[10px] text-indigo-950/70 font-bold tracking-widest uppercase">
                 {businessSettings.tagline}
               </p>
             </div>
@@ -227,41 +202,6 @@ export const Header: React.FC = () => {
             >
               <Calendar className="w-4 h-4" />
               Book OPD Appointment
-            </button>
-            
-            {loggedInEmployee ? (
-              <button
-                onClick={() => {
-                  setIsEmployeePortalOpen(true);
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs uppercase tracking-wider py-2.5 rounded-xs shadow-xs"
-              >
-                <UserCheck className="w-4 h-4" />
-                Staff Portal ({loggedInEmployee.name.split(' ')[0]})
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setIsEmployeeModalOpen(true);
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-950 text-emerald-300 font-extrabold text-xs uppercase tracking-wider py-2.5 rounded-xs shadow-xs border border-emerald-800"
-              >
-                <UserCheck className="w-4 h-4 text-emerald-400" />
-                Employee Login
-              </button>
-            )}
-
-            <button
-              onClick={() => {
-                setIsAdminMode(true);
-                setMobileMenuOpen(false);
-              }}
-              className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs uppercase tracking-wider py-2.5 rounded-xs shadow-xs"
-            >
-              <LayoutDashboard className="w-4 h-4 text-emerald-400" />
-              Admin Portal
             </button>
           </div>
         </div>

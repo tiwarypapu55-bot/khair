@@ -4,25 +4,7 @@ import {
   CheckCircle2, Calendar, Eye, Sparkles, HeartPulse, Building2 
 } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
-
-import bannerFacilities from '../assets/images/khair_banner_facilities_1786209223428.jpg';
-import bannerEyecare from '../assets/images/khair_banner_eyecare_1786209242082.jpg';
-import bannerWelcome from '../assets/images/khair_banner_welcome_1786209260002.jpg';
-
-interface SlideItem {
-  id: number;
-  tagline: string;
-  title: string;
-  highlightText?: string;
-  hindiSlogan?: string;
-  description?: string;
-  bgImage: string;
-  badge: string;
-  leftList?: string[];
-  rightList?: string[];
-  serviceBox?: string[];
-  accentColor: string;
-}
+import { STATIC_HERO_BANNERS } from '../data/initialData';
 
 export const HeroSlider: React.FC = () => {
   const { setIsAppointmentModalOpen, setCurrentTab, sliderSettings, businessSettings } = useHospital();
@@ -31,9 +13,8 @@ export const HeroSlider: React.FC = () => {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  // Filter only active slides
-  const activeSlides = sliderSettings.filter(s => s.isActive);
-  const slides = activeSlides.length > 0 ? activeSlides : sliderSettings;
+  // Present uploaded banners as static banners
+  const slides = (sliderSettings && sliderSettings.length > 0) ? sliderSettings : STATIC_HERO_BANNERS;
 
   // Ensure currentSlide is within bounds if slider length changes
   useEffect(() => {
@@ -144,33 +125,7 @@ export const HeroSlider: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 space-y-4 pt-4">
-
-        {/* 2. BANNER SELECTOR STRIP (Quick Tabs for Banners) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-            <Sparkles className="w-4 h-4 text-emerald-700" />
-            <span>Select Banner ({slides.length}):</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {slides.map((slide, idx) => (
-              <button
-                key={slide.id}
-                onClick={() => setCurrentSlide(idx)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border ${
-                  idx === currentSlide
-                    ? 'bg-emerald-900 text-white border-emerald-950 shadow-xs'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full ${idx === currentSlide ? 'bg-amber-400' : 'bg-slate-400'}`} />
-                <span>Banner #{idx + 1}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 3. NON-OVERLAPPING DETAILS & HELPLINE PANEL BELOW IMAGE */}
+        {/* 2. NON-OVERLAPPING DETAILS & HELPLINE PANEL BELOW IMAGE */}
         {(() => {
           const cardBg = current.cardBgClass || (
             currentSlide === 0

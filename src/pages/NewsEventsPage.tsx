@@ -1,15 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHospital } from '../context/HospitalContext';
-import { FileText, Calendar, MapPin, Users, CheckCircle2, Pin, Megaphone, Sparkles } from 'lucide-react';
+import { FileText, Calendar, MapPin, Users, CheckCircle2, Pin, Megaphone, Sparkles, X } from 'lucide-react';
 
 export const NewsEventsPage: React.FC = () => {
   const { notices, events, registerForEvent, flashAnnouncement, setIsFlashModalOpen } = useHospital();
   const [activeTab, setActiveTab] = useState<'notices' | 'events'>('notices');
-  const [registeredEventIds, setRegisteredEventIds] = useState<string[]>([]);
+  const [registeredEventIds, setRegisteredEventIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('khair_registered_events_v1');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  const handleRegister = (eventId: string) => {
-    registerForEvent(eventId);
-    setRegisteredEventIds(prev => [...prev, eventId]);
+  const [regModalEventId, setRegModalEventId] = useState<string | null>(null);
+  const [attendeeName, setAttendeeName] = useState('');
+  const [attendeePhone, setAttendeePhone] = useState('');
+  const [attendeeEmail, setAttendeeEmail] = useState('');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('khair_registered_events_v1', JSON.stringify(registeredEventIds));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [registeredEventIds]);
+
+  const selectedEventForModal = events.find(e => e.id === regModalEventId) || null;
+
+  const handleOpenRegistration = (eventId: string) => {
+    setRegModalEventId(eventId);
+    setAttendeeName('');
+    setAttendeePhone('');
+    setAttendeeEmail('');
+  };
+
+  const handleSubmitRegistration = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regModalEventId || !attendeeName.trim() || !attendeePhone.trim()) return;
+
+    registerForEvent(regModalEventId, {
+      attendeeName: attendeeName.trim(),
+      attendeePhone: attendeePhone.trim(),
+      attendeeEmail: attendeeEmail.trim(),
+    });
+    setRegisteredEventIds(prev => (prev.includes(regModalEventId) ? prev : [...prev, regModalEventId]));
+    setRegModalEventId(null);
   };
 
   return (
@@ -84,53 +121,56 @@ export const NewsEventsPage: React.FC = () => {
       {/* Tab 1: Notices List */}
       {activeTab === 'notices' && (
         <div className="space-y-4 max-w-4xl mx-auto">
-          {notices.map((notice) => (
-            <div
-              key={notice.id}
-              className="bg-white border border-slate-200 text-slate-900 rounded-3xl p-6 shadow-xs transition-all relative space-y-3"
-            >
-              {notice.isPinned && (
-                <span className="absolute top-4 right-4 bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs border border-amber-200">
-                  <Pin className="w-3 h-3" /> Pinned
-                </span>
-              )}
-
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-2.5 py-0.5 rounded-md">
-                    {notice.category}
+          {notices.map((notice) => {
+            const noticeAttachment = notice.docUrl || notice.attachmentUrl;
+            return (
+              <div
+                key={notice.id}
+                className="bg-white border border-slate-200 text-slate-900 rounded-3xl p-6 shadow-xs transition-all relative space-y-3"
+              >
+                {notice.isPinned && (
+                  <span className="absolute top-4 right-4 bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs border border-amber-200">
+                    <Pin className="w-3 h-3" /> Pinned
                   </span>
-                  <span className="text-slate-500">• {notice.date}</span>
-                  <span className="text-slate-600">Target: <strong>{notice.targetAudience}</strong></span>
-                </div>
-
-                <h3 className="text-lg font-bold text-slate-900">{notice.title}</h3>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                  {notice.content}
-                </p>
-
-                {notice.attachmentUrl && (
-                  <div className="pt-2">
-                    {notice.attachmentUrl.startsWith('data:application/pdf') || notice.attachmentUrl.toLowerCase().includes('.pdf') ? (
-                      <a
-                        href={notice.attachmentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs rounded-xl transition"
-                      >
-                        <FileText className="w-4 h-4" />
-                        <span>View Attached Notice PDF Document</span>
-                      </a>
-                    ) : (
-                      <div className="max-w-md rounded-2xl overflow-hidden border border-slate-200 mt-2">
-                        <img src={notice.attachmentUrl} alt="Notice Attachment" className="w-full max-h-64 object-cover" />
-                      </div>
-                    )}
-                  </div>
                 )}
+
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold px-2.5 py-0.5 rounded-md">
+                      {notice.category}
+                    </span>
+                    <span className="text-slate-500">• {notice.date}</span>
+                    <span className="text-slate-600">Target: <strong>{notice.targetAudience}</strong></span>
+                  </div>
+
+                  <h3 className="text-lg font-bold text-slate-900">{notice.title}</h3>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                    {notice.content}
+                  </p>
+
+                  {noticeAttachment && (
+                    <div className="pt-2">
+                      {noticeAttachment.startsWith('data:application/pdf') || noticeAttachment.toLowerCase().includes('.pdf') ? (
+                        <a
+                          href={noticeAttachment}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs rounded-xl transition"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>View Attached Notice PDF Document</span>
+                        </a>
+                      ) : (
+                        <div className="max-w-md rounded-2xl overflow-hidden border border-slate-200 mt-2">
+                          <img src={noticeAttachment} alt="Notice Attachment" className="w-full max-h-64 object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -139,6 +179,7 @@ export const NewsEventsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {events.map((evt) => {
             const isRegistered = registeredEventIds.includes(evt.id);
+            const isFull = evt.registeredCount >= evt.maxSeats;
             return (
               <div
                 key={evt.id}
@@ -180,17 +221,90 @@ export const NewsEventsPage: React.FC = () => {
                     </span>
                   ) : (
                     <button
-                      onClick={() => handleRegister(evt.id)}
-                      disabled={evt.status === 'Completed'}
+                      onClick={() => handleOpenRegistration(evt.id)}
+                      disabled={evt.status === 'Completed' || isFull}
                       className="bg-emerald-800 hover:bg-emerald-900 text-white disabled:opacity-50 font-bold px-4 py-2 rounded-xl transition cursor-pointer"
                     >
-                      {evt.status === 'Completed' ? 'Camp Completed' : 'Register Free Spot'}
+                      {evt.status === 'Completed' ? 'Camp Completed' : isFull ? 'Seats Full' : 'Register Free Spot'}
                     </button>
                   )}
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Event Registration Modal */}
+      {selectedEventForModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Free Health Camp Registration</span>
+                <h3 className="font-bold text-base text-slate-900">{selectedEventForModal.title}</h3>
+              </div>
+              <button
+                onClick={() => setRegModalEventId(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitRegistration} className="space-y-4 text-xs sm:text-sm">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Participant Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={attendeeName}
+                  onChange={(e) => setAttendeeName(e.target.value)}
+                  placeholder="e.g. Suresh Verma"
+                  className="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Mobile / WhatsApp Number *</label>
+                <input
+                  type="tel"
+                  required
+                  value={attendeePhone}
+                  onChange={(e) => setAttendeePhone(e.target.value)}
+                  placeholder="e.g. +91 98390 12345"
+                  className="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Email Address (Optional)</label>
+                <input
+                  type="email"
+                  value={attendeeEmail}
+                  onChange={(e) => setAttendeeEmail(e.target.value)}
+                  placeholder="e.g. suresh@gmail.com"
+                  className="w-full border border-slate-300 rounded-xl p-2.5 bg-slate-50 focus:ring-2 focus:ring-emerald-700 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRegModalEventId(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-5 py-2.5 rounded-xl cursor-pointer"
+                >
+                  Confirm Registration
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

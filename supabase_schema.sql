@@ -261,3 +261,107 @@ CREATE POLICY "Enable read access for all users on hospital_settings" ON public.
 CREATE POLICY "Enable insert access for all users on hospital_settings" ON public.hospital_settings FOR INSERT WITH CHECK (key IS NOT NULL);
 CREATE POLICY "Enable update access for all users on hospital_settings" ON public.hospital_settings FOR UPDATE USING (key IS NOT NULL) WITH CHECK (key IS NOT NULL);
 CREATE POLICY "Enable delete access for all users on hospital_settings" ON public.hospital_settings FOR DELETE USING (key IS NOT NULL);
+
+-- ============================================================
+-- 9. DEPARTMENTS TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.departments (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name TEXT NOT NULL,
+  icon_name TEXT DEFAULT 'Stethoscope',
+  description TEXT,
+  head_of_department TEXT,
+  bed_capacity INTEGER DEFAULT 15,
+  phone_ext TEXT,
+  common_treatments JSONB DEFAULT '[]'::jsonb,
+  image TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read access for all users on departments" ON public.departments;
+DROP POLICY IF EXISTS "Enable insert access for all users on departments" ON public.departments;
+DROP POLICY IF EXISTS "Enable update access for all users on departments" ON public.departments;
+DROP POLICY IF EXISTS "Enable delete access for all users on departments" ON public.departments;
+
+CREATE POLICY "Enable read access for all users on departments" ON public.departments FOR SELECT USING (true);
+CREATE POLICY "Enable insert access for all users on departments" ON public.departments FOR INSERT WITH CHECK (id IS NOT NULL);
+CREATE POLICY "Enable update access for all users on departments" ON public.departments FOR UPDATE USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
+CREATE POLICY "Enable delete access for all users on departments" ON public.departments FOR DELETE USING (id IS NOT NULL);
+
+-- ============================================================
+-- 10. FACILITIES TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.facilities (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name TEXT NOT NULL,
+  category TEXT,
+  description TEXT,
+  availability TEXT,
+  image TEXT,
+  features JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.facilities ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read access for all users on facilities" ON public.facilities;
+DROP POLICY IF EXISTS "Enable insert access for all users on facilities" ON public.facilities;
+DROP POLICY IF EXISTS "Enable update access for all users on facilities" ON public.facilities;
+DROP POLICY IF EXISTS "Enable delete access for all users on facilities" ON public.facilities;
+
+CREATE POLICY "Enable read access for all users on facilities" ON public.facilities FOR SELECT USING (true);
+CREATE POLICY "Enable insert access for all users on facilities" ON public.facilities FOR INSERT WITH CHECK (id IS NOT NULL);
+CREATE POLICY "Enable update access for all users on facilities" ON public.facilities FOR UPDATE USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
+CREATE POLICY "Enable delete access for all users on facilities" ON public.facilities FOR DELETE USING (id IS NOT NULL);
+
+-- ============================================================
+-- 11. EVENT REGISTRATIONS TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.event_registrations (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  event_id TEXT NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  attendee_name TEXT DEFAULT 'Patient / Visitor',
+  attendee_phone TEXT,
+  attendee_email TEXT,
+  registered_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.event_registrations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read access for all users on event_registrations" ON public.event_registrations;
+DROP POLICY IF EXISTS "Enable insert access for all users on event_registrations" ON public.event_registrations;
+DROP POLICY IF EXISTS "Enable update access for all users on event_registrations" ON public.event_registrations;
+DROP POLICY IF EXISTS "Enable delete access for all users on event_registrations" ON public.event_registrations;
+
+CREATE POLICY "Enable read access for all users on event_registrations" ON public.event_registrations FOR SELECT USING (true);
+CREATE POLICY "Enable insert access for all users on event_registrations" ON public.event_registrations FOR INSERT WITH CHECK (id IS NOT NULL);
+CREATE POLICY "Enable update access for all users on event_registrations" ON public.event_registrations FOR UPDATE USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
+CREATE POLICY "Enable delete access for all users on event_registrations" ON public.event_registrations FOR DELETE USING (id IS NOT NULL);
+
+-- ============================================================
+-- 12. APPOINTMENT COMMUNICATION LOGS TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.appointment_communication_logs (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  appointment_id TEXT NOT NULL REFERENCES public.appointments(id) ON DELETE CASCADE,
+  sent_by_employee_name TEXT,
+  sent_at TEXT,
+  channel TEXT DEFAULT 'Note',
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.appointment_communication_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read access for all users on appointment_communication_logs" ON public.appointment_communication_logs;
+DROP POLICY IF EXISTS "Enable insert access for all users on appointment_communication_logs" ON public.appointment_communication_logs;
+DROP POLICY IF EXISTS "Enable update access for all users on appointment_communication_logs" ON public.appointment_communication_logs;
+DROP POLICY IF EXISTS "Enable delete access for all users on appointment_communication_logs" ON public.appointment_communication_logs;
+
+CREATE POLICY "Enable read access for all users on appointment_communication_logs" ON public.appointment_communication_logs FOR SELECT USING (true);
+CREATE POLICY "Enable insert access for all users on appointment_communication_logs" ON public.appointment_communication_logs FOR INSERT WITH CHECK (id IS NOT NULL);
+CREATE POLICY "Enable update access for all users on appointment_communication_logs" ON public.appointment_communication_logs FOR UPDATE USING (id IS NOT NULL) WITH CHECK (id IS NOT NULL);
+CREATE POLICY "Enable delete access for all users on appointment_communication_logs" ON public.appointment_communication_logs FOR DELETE USING (id IS NOT NULL);
+

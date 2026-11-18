@@ -1,6 +1,6 @@
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import {
-  Doctor, Employee, Notice, EventItem, GalleryItem, FeedbackItem,
+  Doctor, Department, Facility, Employee, Notice, EventItem, EventRegistration, GalleryItem, FeedbackItem,
   Appointment, BusinessSettings, LogoSettings, SliderSetting, FlashAnnouncement
 } from '../types';
 
@@ -8,10 +8,11 @@ import {
 // DOCTORS SYNC
 // ============================================================
 export async function fetchDoctorsFromSupabase(): Promise<Doctor[] | null> {
+  if (!isSupabaseConfigured) return null;
   try {
     const { data, error } = await supabase.from('doctors').select('*').order('created_at', { ascending: true });
     if (error) {
-      console.warn('Supabase fetch doctors error:', error.message || error);
+      console.warn('Supabase fetch doctors warning:', error.message || error);
       return null;
     }
     if (!data) return null;
@@ -37,6 +38,7 @@ export async function fetchDoctorsFromSupabase(): Promise<Doctor[] | null> {
 }
 
 export async function saveDoctorToSupabase(doc: Doctor): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('doctors').upsert({
       id: doc.id,
@@ -54,26 +56,27 @@ export async function saveDoctorToSupabase(doc: Doctor): Promise<boolean> {
       room_no: doc.roomNo
     });
     if (error) {
-      console.error('Supabase save doctor error:', error.message || error);
+      console.warn('Supabase save doctor warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase save doctor exception:', err);
+    console.warn('Supabase save doctor exception:', err);
     return false;
   }
 }
 
 export async function deleteDoctorFromSupabase(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('doctors').delete().eq('id', id);
     if (error) {
-      console.error('Supabase delete doctor error:', error.message || error);
+      console.warn('Supabase delete doctor warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase delete doctor exception:', err);
+    console.warn('Supabase delete doctor exception:', err);
     return false;
   }
 }
@@ -82,10 +85,11 @@ export async function deleteDoctorFromSupabase(id: string): Promise<boolean> {
 // EMPLOYEES SYNC
 // ============================================================
 export async function fetchEmployeesFromSupabase(): Promise<Employee[] | null> {
+  if (!isSupabaseConfigured) return null;
   try {
     const { data, error } = await supabase.from('employees').select('*').order('created_at', { ascending: true });
     if (error) {
-      console.warn('Supabase fetch employees error:', error.message || error);
+      console.warn('Supabase fetch employees warning:', error.message || error);
       return null;
     }
     if (!data) return null;
@@ -109,6 +113,7 @@ export async function fetchEmployeesFromSupabase(): Promise<Employee[] | null> {
 }
 
 export async function saveEmployeeToSupabase(emp: Employee): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('employees').upsert({
       id: emp.id,
@@ -124,26 +129,27 @@ export async function saveEmployeeToSupabase(emp: Employee): Promise<boolean> {
       password: emp.password
     });
     if (error) {
-      console.error('Supabase save employee error:', error.message || error);
+      console.warn('Supabase save employee warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase save employee exception:', err);
+    console.warn('Supabase save employee exception:', err);
     return false;
   }
 }
 
 export async function deleteEmployeeFromSupabase(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('employees').delete().eq('id', id);
     if (error) {
-      console.error('Supabase delete employee error:', error.message || error);
+      console.warn('Supabase delete employee warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase delete employee exception:', err);
+    console.warn('Supabase delete employee exception:', err);
     return false;
   }
 }
@@ -152,10 +158,11 @@ export async function deleteEmployeeFromSupabase(id: string): Promise<boolean> {
 // NOTICES SYNC
 // ============================================================
 export async function fetchNoticesFromSupabase(): Promise<Notice[] | null> {
+  if (!isSupabaseConfigured) return null;
   try {
     const { data, error } = await supabase.from('notices').select('*').order('created_at', { ascending: false });
     if (error) {
-      console.warn('Supabase fetch notices error:', error.message || error);
+      console.warn('Supabase fetch notices warning:', error.message || error);
       return null;
     }
     if (!data) return null;
@@ -177,6 +184,7 @@ export async function fetchNoticesFromSupabase(): Promise<Notice[] | null> {
 }
 
 export async function saveNoticeToSupabase(notice: Notice): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('notices').upsert({
       id: notice.id,
@@ -190,26 +198,27 @@ export async function saveNoticeToSupabase(notice: Notice): Promise<boolean> {
       doc_url: notice.docUrl || ''
     });
     if (error) {
-      console.error('Supabase save notice error:', error.message || error);
+      console.warn('Supabase save notice warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase save notice exception:', err);
+    console.warn('Supabase save notice exception:', err);
     return false;
   }
 }
 
 export async function deleteNoticeFromSupabase(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('notices').delete().eq('id', id);
     if (error) {
-      console.error('Supabase delete notice error:', error.message || error);
+      console.warn('Supabase delete notice warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase delete notice exception:', err);
+    console.warn('Supabase delete notice exception:', err);
     return false;
   }
 }
@@ -218,10 +227,11 @@ export async function deleteNoticeFromSupabase(id: string): Promise<boolean> {
 // EVENTS SYNC
 // ============================================================
 export async function fetchEventsFromSupabase(): Promise<EventItem[] | null> {
+  if (!isSupabaseConfigured) return null;
   try {
     const { data, error } = await supabase.from('events').select('*').order('created_at', { ascending: false });
     if (error) {
-      console.warn('Supabase fetch events error:', error.message || error);
+      console.warn('Supabase fetch events warning:', error.message || error);
       return null;
     }
     if (!data) return null;
@@ -244,6 +254,7 @@ export async function fetchEventsFromSupabase(): Promise<EventItem[] | null> {
 }
 
 export async function saveEventToSupabase(event: EventItem): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('events').upsert({
       id: event.id,
@@ -258,26 +269,27 @@ export async function saveEventToSupabase(event: EventItem): Promise<boolean> {
       image_url: event.imageUrl
     });
     if (error) {
-      console.error('Supabase save event error:', error.message || error);
+      console.warn('Supabase save event warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase save event exception:', err);
+    console.warn('Supabase save event exception:', err);
     return false;
   }
 }
 
 export async function deleteEventFromSupabase(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('events').delete().eq('id', id);
     if (error) {
-      console.error('Supabase delete event error:', error.message || error);
+      console.warn('Supabase delete event warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase delete event exception:', err);
+    console.warn('Supabase delete event exception:', err);
     return false;
   }
 }
@@ -286,10 +298,11 @@ export async function deleteEventFromSupabase(id: string): Promise<boolean> {
 // GALLERY SYNC
 // ============================================================
 export async function fetchGalleryFromSupabase(): Promise<GalleryItem[] | null> {
+  if (!isSupabaseConfigured) return null;
   try {
     const { data, error } = await supabase.from('gallery').select('*').order('created_at', { ascending: false });
     if (error) {
-      console.warn('Supabase fetch gallery error:', error.message || error);
+      console.warn('Supabase fetch gallery warning:', error.message || error);
       return null;
     }
     if (!data) return null;
@@ -308,6 +321,7 @@ export async function fetchGalleryFromSupabase(): Promise<GalleryItem[] | null> 
 }
 
 export async function saveGalleryItemToSupabase(item: GalleryItem): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('gallery').upsert({
       id: item.id,
@@ -318,26 +332,27 @@ export async function saveGalleryItemToSupabase(item: GalleryItem): Promise<bool
       date: item.date
     });
     if (error) {
-      console.error('Supabase save gallery item error:', error.message || error);
+      console.warn('Supabase save gallery item warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase save gallery item exception:', err);
+    console.warn('Supabase save gallery item exception:', err);
     return false;
   }
 }
 
 export async function deleteGalleryItemFromSupabase(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('gallery').delete().eq('id', id);
     if (error) {
-      console.error('Supabase delete gallery item error:', error.message || error);
+      console.warn('Supabase delete gallery item warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase delete gallery item exception:', err);
+    console.warn('Supabase delete gallery item exception:', err);
     return false;
   }
 }
@@ -346,10 +361,11 @@ export async function deleteGalleryItemFromSupabase(id: string): Promise<boolean
 // FEEDBACKS SYNC
 // ============================================================
 export async function fetchFeedbacksFromSupabase(): Promise<FeedbackItem[] | null> {
+  if (!isSupabaseConfigured) return null;
   try {
     const { data, error } = await supabase.from('feedbacks').select('*').order('created_at', { ascending: false });
     if (error) {
-      console.warn('Supabase fetch feedbacks error:', error.message || error);
+      console.warn('Supabase fetch feedbacks warning:', error.message || error);
       return null;
     }
     if (!data) return null;
@@ -372,6 +388,7 @@ export async function fetchFeedbacksFromSupabase(): Promise<FeedbackItem[] | nul
 }
 
 export async function saveFeedbackToSupabase(fb: FeedbackItem): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('feedbacks').upsert({
       id: fb.id,
@@ -386,26 +403,27 @@ export async function saveFeedbackToSupabase(fb: FeedbackItem): Promise<boolean>
       admin_notes: fb.adminNotes
     });
     if (error) {
-      console.error('Supabase save feedback error:', error.message || error);
+      console.warn('Supabase save feedback warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase save feedback exception:', err);
+    console.warn('Supabase save feedback exception:', err);
     return false;
   }
 }
 
 export async function deleteFeedbackFromSupabase(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('feedbacks').delete().eq('id', id);
     if (error) {
-      console.error('Supabase delete feedback error:', error.message || error);
+      console.warn('Supabase delete feedback warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase delete feedback exception:', err);
+    console.warn('Supabase delete feedback exception:', err);
     return false;
   }
 }
@@ -414,10 +432,11 @@ export async function deleteFeedbackFromSupabase(id: string): Promise<boolean> {
 // APPOINTMENTS SYNC
 // ============================================================
 export async function fetchAppointmentsFromSupabase(): Promise<Appointment[] | null> {
+  if (!isSupabaseConfigured) return null;
   try {
     const { data, error } = await supabase.from('appointments').select('*').order('created_at', { ascending: false });
     if (error) {
-      console.warn('Supabase fetch appointments error:', error.message || error);
+      console.warn('Supabase fetch appointments warning:', error.message || error);
       return null;
     }
     if (!data) return null;
@@ -446,6 +465,7 @@ export async function fetchAppointmentsFromSupabase(): Promise<Appointment[] | n
 }
 
 export async function saveAppointmentToSupabase(app: Appointment): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('appointments').upsert({
       id: app.id,
@@ -465,12 +485,12 @@ export async function saveAppointmentToSupabase(app: Appointment): Promise<boole
       communication_logs: app.communicationLogs || []
     });
     if (error) {
-      console.error('Supabase save appointment error:', error.message || error);
+      console.warn('Supabase save appointment warning:', error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Supabase save appointment exception:', err);
+    console.warn('Supabase save appointment exception:', err);
     return false;
   }
 }
@@ -479,10 +499,11 @@ export async function saveAppointmentToSupabase(app: Appointment): Promise<boole
 // SETTINGS SYNC (BusinessSettings, LogoSettings, SliderSetting[], FlashAnnouncement)
 // ============================================================
 export async function fetchSettingFromSupabase<T>(key: string): Promise<T | null> {
+  if (!isSupabaseConfigured) return null;
   try {
     const { data, error } = await supabase.from('hospital_settings').select('value').eq('key', key).maybeSingle();
     if (error) {
-      console.warn(`Supabase fetch setting [${key}] error:`, error.message || error);
+      console.warn(`Supabase fetch setting [${key}] warning:`, error.message || error);
       return null;
     }
     if (!data) return null;
@@ -494,6 +515,7 @@ export async function fetchSettingFromSupabase<T>(key: string): Promise<T | null
 }
 
 export async function saveSettingToSupabase<T>(key: string, value: T): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
     const { error } = await supabase.from('hospital_settings').upsert({
       key,
@@ -501,12 +523,141 @@ export async function saveSettingToSupabase<T>(key: string, value: T): Promise<b
       updated_at: new Date().toISOString()
     });
     if (error) {
-      console.error(`Supabase save setting [${key}] error:`, error.message || error);
+      console.warn(`Supabase save setting [${key}] warning:`, error.message || error);
       return false;
     }
     return true;
   } catch (err) {
-    console.error(`Supabase save setting [${key}] exception:`, err);
+    console.warn(`Supabase save setting [${key}] exception:`, err);
     return false;
   }
 }
+
+// ============================================================
+// DEPARTMENTS SYNC
+// ============================================================
+export async function fetchDepartmentsFromSupabase(): Promise<Department[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('departments').select('*').order('created_at', { ascending: true });
+    if (error) {
+      console.warn('Supabase fetch departments warning:', error.message || error);
+      return null;
+    }
+    if (!data) return null;
+    return data.map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      iconName: d.icon_name || 'Stethoscope',
+      description: d.description || '',
+      headOfDepartment: d.head_of_department || '',
+      bedCapacity: Number(d.bed_capacity) || 15,
+      phoneExt: d.phone_ext || '',
+      commonTreatments: Array.isArray(d.common_treatments) ? d.common_treatments : [],
+      image: d.image || ''
+    }));
+  } catch (err) {
+    console.warn('Supabase fetch departments exception:', err);
+    return null;
+  }
+}
+
+export async function saveDepartmentToSupabase(dept: Department): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('departments').upsert({
+      id: dept.id,
+      name: dept.name,
+      icon_name: dept.iconName,
+      description: dept.description,
+      head_of_department: dept.headOfDepartment,
+      bed_capacity: dept.bedCapacity,
+      phone_ext: dept.phoneExt,
+      common_treatments: dept.commonTreatments,
+      image: dept.image
+    });
+    if (error) {
+      console.warn('Supabase save department warning:', error.message || error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Supabase save department exception:', err);
+    return false;
+  }
+}
+
+export async function deleteDepartmentFromSupabase(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('departments').delete().eq('id', id);
+    if (error) {
+      console.warn('Supabase delete department warning:', error.message || error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('Supabase delete department exception:', err);
+    return false;
+  }
+}
+
+// ============================================================
+// FACILITIES & EVENT REGISTRATIONS SYNC
+// ============================================================
+export async function fetchFacilitiesFromSupabase(): Promise<Facility[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.from('facilities').select('*').order('created_at', { ascending: true });
+    if (error) return null;
+    if (!data) return null;
+    return data.map((f: any) => ({
+      id: f.id,
+      name: f.name,
+      category: f.category || '',
+      description: f.description || '',
+      availability: f.availability || '',
+      image: f.image || '',
+      features: Array.isArray(f.features) ? f.features : []
+    }));
+  } catch {
+    return null;
+  }
+}
+
+export async function saveFacilityToSupabase(fac: Facility): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('facilities').upsert({
+      id: fac.id,
+      name: fac.name,
+      category: fac.category,
+      description: fac.description,
+      availability: fac.availability,
+      image: fac.image,
+      features: fac.features
+    });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function saveEventRegistrationToSupabase(reg: EventRegistration): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase.from('event_registrations').upsert({
+      id: reg.id,
+      event_id: reg.eventId,
+      attendee_name: reg.attendeeName,
+      attendee_phone: reg.attendeePhone,
+      attendee_email: reg.attendeeEmail,
+      registered_at: reg.registeredAt
+    });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+

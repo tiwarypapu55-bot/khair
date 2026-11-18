@@ -1,10 +1,26 @@
 import React from 'react';
+import khairLogoImg from '../assets/images/khair_new_logo_1789555306483.jpg';
 
 interface LogoProps {
   className?: string;
+  useImage?: boolean;
 }
 
-export const KhairLogo: React.FC<LogoProps> = ({ className = "w-10 h-10" }) => {
+export const KhairLogo: React.FC<LogoProps> = ({ className = "w-10 h-10", useImage = true }) => {
+  const [imgError, setImgError] = React.useState(false);
+
+  if (useImage && !imgError) {
+    return (
+      <img
+        src={khairLogoImg}
+        alt="Khair Hospital Logo"
+        referrerPolicy="no-referrer"
+        onError={() => setImgError(true)}
+        className={`object-contain rounded-full shadow-xs bg-white ${className}`}
+      />
+    );
+  }
+
   return (
     <div className={`relative inline-flex items-center justify-center shrink-0 bg-white rounded-full p-1 shadow-xs border border-slate-200 overflow-hidden ${className}`}>
       <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">

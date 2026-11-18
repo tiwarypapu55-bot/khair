@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useHospital } from '../context/HospitalContext';
 import { Appointment, CommunicationLog } from '../types';
+import { formatLocalDateISO, generateSlotsFromSchedule } from '../utils/scheduleSlots';
 import {
   Calendar, Clock, User, Phone, MessageSquare, Send, CheckCircle2,
   XCircle, Clock3, AlertCircle, Printer, Search, Filter, Plus, LogOut,
@@ -119,9 +120,14 @@ export const EmployeePortal: React.FC = () => {
   };
 
   // Add Walk-in Appointment Submit
+  const selectedWalkInDoc = doctors.find(d => d.id === walkInDoctorId || d.name === walkInDoctor) || doctors[0];
+  const todayLocalStr = formatLocalDateISO(new Date());
+  const walkInScheduleSlots = selectedWalkInDoc
+    ? generateSlotsFromSchedule(selectedWalkInDoc.opdSchedule, todayLocalStr)
+    : [];
+
   const handleAddWalkIn = (e: React.FormEvent) => {
     e.preventDefault();
-    const todayStr = new Date().toISOString().split('T')[0];
     const newApp = addAppointment({
       patientName: walkInPatientName,
       age: Number(walkInAge),
@@ -131,7 +137,7 @@ export const EmployeePortal: React.FC = () => {
       department: walkInDept,
       doctorId: walkInDoctorId,
       doctorName: walkInDoctor,
-      date: todayStr,
+      date: todayLocalStr,
       timeSlot: walkInSlot,
       symptoms: walkInSymptoms
     });
@@ -141,6 +147,8 @@ export const EmployeePortal: React.FC = () => {
     // Reset form
     setWalkInPatientName('');
     setWalkInPhone('');
+    setWalkInEmail('');
+    setWalkInSymptoms('OPD Consultation / Routine Checkup');
   };
 
   return (
@@ -172,7 +180,10 @@ export const EmployeePortal: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setIsAddWalkInOpen(true)}
+              onClick={() => {
+                setWalkInSlot(walkInScheduleSlots[0]?.value || 'Walk-in Counter (Immediate Queue)');
+                setIsAddWalkInOpen(true);
+              }}
               className="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold px-4 py-2.5 rounded-xl shadow-xs transition cursor-pointer flex items-center gap-2"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
@@ -765,7 +776,12 @@ export const EmployeePortal: React.FC = () => {
                     onChange={(e) => {
                       setWalkInDoctor(e.target.value);
                       const d = doctors.find(doc => doc.name === e.target.value);
-                      if (d) setWalkInDoctorId(d.id);
+                      if (d) {
+                        setWalkInDoctorId(d.id);
+                        setWalkInDept(d.department);
+                        const nextSlots = generateSlotsFromSchedule(d.opdSchedule, todayLocalStr);
+                        if (nextSlots.length > 0) setWalkInSlot(nextSlots[0].value);
+                      }
                     }}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-600"
                   >
@@ -773,6 +789,33 @@ export const EmployeePortal: React.FC = () => {
                       <option key={doc.id} value={doc.name}>{doc.name}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">OPD Time Slot *</label>
+                  <select
+                    value={walkInSlot}
+                    onChange={(e) => setWalkInSlot(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-600"
+                  >
+                    {walkInScheduleSlots.map((slot) => (
+                      <option key={slot.value} value={slot.value}>{slot.label}</option>
+                    ))}
+                    <option value="Walk-in Counter (Immediate Queue)">Walk-in Counter (Immediate Queue)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 uppercase mb-1">Email (Optional)</label>
+                  <input
+                    type="email"
+                    placeholder="patient@gmail.com"
+                    value={walkInEmail}
+                    onChange={(e) => setWalkInEmail(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-600"
+                  />
                 </div>
               </div>
 

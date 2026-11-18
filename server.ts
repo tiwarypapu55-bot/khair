@@ -1,9 +1,12 @@
+import http from "node:http";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import { WebSocketServer, WebSocket } from "ws";
+import { serverStore, SyncMutation } from "./serverStore";
 
 dotenv.config();
 
@@ -13,8 +16,153 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  const server = http.createServer(app);
 
-  app.use(express.json());
+  // Generous limit for high-res logo/gallery base64 payloads
+  app.use(express.json({ limit: "25mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+
+  // WebSocket Server attached to the same HTTP server on path '/ws'
+  const wss = new WebSocketServer({ server, path: "/ws" });
+  const clients = new Set<WebSocket>();
+
+  function broadcast(msg: any, excludeWs?: WebSocket) {
+    const payload = typeof msg === "string" ? msg : JSON.stringify(msg);
+    for (const client of clients) {
+      if (client !== excludeWs && client.readyState === WebSocket.OPEN) {
+        try {
+          client.send(payload);
+        } catch (e) {
+          console.warn("[WS Broadcast Error]", e);
+        }
+      }
+    }
+  }
+
+  wss.on("connection", (ws, req) => {
+    clients.add(ws);
+    const ip = req.socket.remoteAddress || "unknown";
+    console.log(`[WS] Device connected from ${ip}. Total connected: ${clients.size}`);
+
+    // Send initial snapshot on connect
+    ws.send(
+      JSON.stringify({
+        type: "sync:init",
+        version: serverStore.getVersion(),
+        lastUpdated: serverStore.getLastUpdated(),
+        data: serverStore.getData(),
+        connectedClients: clients.size,
+      })
+    );
+
+    // Broadcast updated client count to all
+    broadcast({
+      type: "sync:clients_count",
+      count: clients.size,
+    });
+
+    ws.on("message", (raw) => {
+      try {
+        const message = JSON.parse(raw.toString());
+        if (message.type === "sync:mutation" && message.mutation) {
+          const result = serverStore.applyMutation(message.mutation);
+          if (result.success) {
+            broadcast(
+              {
+                type: "sync:event",
+                mutation: message.mutation,
+                version: result.version,
+                timestamp: new Date().toISOString(),
+              },
+              ws
+            );
+          }
+        } else if (message.type === "ping") {
+          ws.send(JSON.stringify({ type: "pong", timestamp: Date.now() }));
+        }
+      } catch (e) {
+        console.warn("[WS] Error parsing message:", e);
+      }
+    });
+
+    ws.on("close", () => {
+      clients.delete(ws);
+      console.log(`[WS] Device disconnected. Total connected: ${clients.size}`);
+      broadcast({
+        type: "sync:clients_count",
+        count: clients.size,
+      });
+    });
+
+    ws.on("error", (err) => {
+      console.warn("[WS] Socket error:", err.message);
+    });
+  });
+
+  // REST Synchronization Endpoints
+  app.get("/api/sync/all", (_req, res) => {
+    res.json({
+      success: true,
+      version: serverStore.getVersion(),
+      lastUpdated: serverStore.getLastUpdated(),
+      data: serverStore.getData(),
+      connectedClients: clients.size,
+    });
+  });
+
+  app.post("/api/sync/mutation", (req, res) => {
+    const mutation = req.body as SyncMutation;
+    if (!mutation || !mutation.type) {
+      return res.status(400).json({ error: "Invalid mutation payload" });
+    }
+
+    const result = serverStore.applyMutation(mutation);
+    if (result.success) {
+      broadcast({
+        type: "sync:event",
+        mutation,
+        version: result.version,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      version: result.version,
+      lastUpdated: serverStore.getLastUpdated(),
+    });
+  });
+
+  app.post("/api/sync/bootstrap", (req, res) => {
+    const initialData = req.body;
+    const modified = serverStore.bootstrap(initialData);
+    if (modified) {
+      broadcast({
+        type: "sync:init",
+        version: serverStore.getVersion(),
+        lastUpdated: serverStore.getLastUpdated(),
+        data: serverStore.getData(),
+        connectedClients: clients.size,
+      });
+    }
+
+    res.json({
+      success: true,
+      bootstrapped: modified,
+      version: serverStore.getVersion(),
+    });
+  });
+
+  app.get("/api/sync/status", (_req, res) => {
+    res.json({
+      status: "ok",
+      connectedClients: clients.size,
+      version: serverStore.getVersion(),
+      lastUpdated: serverStore.getLastUpdated(),
+      isPopulated: serverStore.isPopulated(),
+      tables: serverStore.getTableStats(),
+    });
+  });
 
   // Initialize Gemini AI client if API key is provided
   let aiClient: GoogleGenAI | null = null;
@@ -118,8 +266,8 @@ Instructions:
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Khair Hospital server running on http://0.0.0.0:${PORT}`);
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`Khair Hospital server & live sync running on http://0.0.0.0:${PORT}`);
   });
 }
 

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useHospital } from '../../context/HospitalContext';
 import { Employee, ShiftType, EmployeeStatus } from '../../types';
+import { formatLocalDateISO } from '../../utils/scheduleSlots';
 import { Users, Plus, Search, Edit2, Trash2, X, Clock, Shield } from 'lucide-react';
 
 export const AdminEmployees: React.FC = () => {
-  const { employees, addEmployee, updateEmployee, deleteEmployee } = useHospital();
+  const { employees, departments, addEmployee, updateEmployee, deleteEmployee } = useHospital();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -15,7 +16,7 @@ export const AdminEmployees: React.FC = () => {
   const [department, setDepartment] = useState('Inpatient Ward & ICU');
   const [phone, setPhone] = useState('+91 98391 10000');
   const [email, setEmail] = useState('staff@khairhospital.in');
-  const [joinDate, setJoinDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [joinDate, setJoinDate] = useState(() => formatLocalDateISO(new Date()));
   const [shift, setShift] = useState<ShiftType>('Morning');
   const [status, setStatus] = useState<EmployeeStatus>('Active');
   const [password, setPassword] = useState('khair123');
@@ -34,7 +35,7 @@ export const AdminEmployees: React.FC = () => {
     setDepartment('Inpatient Ward & ICU');
     setPhone('+91 98391 10000');
     setEmail('staff@khairhospital.in');
-    setJoinDate(new Date().toISOString().split('T')[0]);
+    setJoinDate(formatLocalDateISO(new Date()));
     setShift('Morning');
     setStatus('Active');
     setPassword('khair123');
@@ -212,19 +213,54 @@ export const AdminEmployees: React.FC = () => {
                   <label className="block font-semibold text-slate-700 mb-1">Department</label>
                   <input
                     type="text"
+                    list="employee-department-options"
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
                     placeholder="Inpatient Ward / ICU / OT"
                     className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 focus:outline-hidden"
                   />
+                  <datalist id="employee-department-options">
+                    <option value="Inpatient Ward & ICU" />
+                    <option value="OPD & Front Desk" />
+                    <option value="Laboratory & Pathology" />
+                    <option value="Operation Theatre (OT)" />
+                    <option value="Pharmacy & Billing" />
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.name} />
+                    ))}
+                  </datalist>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Phone Number</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Phone Number *</label>
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 focus:outline-hidden"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. sunil@khairhospital.in"
+                    className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 focus:outline-hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Joining Date</label>
+                  <input
+                    type="date"
+                    value={joinDate}
+                    onChange={(e) => setJoinDate(e.target.value)}
                     className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-blue-600 focus:outline-hidden"
                   />
                 </div>

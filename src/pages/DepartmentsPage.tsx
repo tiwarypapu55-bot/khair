@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useHospital } from '../context/HospitalContext';
 import { Stethoscope, Calendar, CheckCircle2, ChevronRight, Bed } from 'lucide-react';
+import { getFixedDoctorImage } from '../data/initialData';
 
 export const DepartmentsPage: React.FC = () => {
   const { departments, setIsAppointmentModalOpen, setSelectedDoctorForBooking, doctors } = useHospital();
@@ -116,7 +117,7 @@ export const DepartmentsPage: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {deptDoctors.map((doc) => (
                     <div key={doc.id} className="bg-white border border-slate-200 text-slate-900 p-4 rounded-3xl flex items-center gap-3 shadow-xs">
-                      <img src={doc.image} alt={doc.name} className="w-14 h-16 rounded-xl object-cover object-top shrink-0 border border-slate-100" />
+                      <img src={getFixedDoctorImage(doc.id, doc.image)} alt={doc.name} className="w-14 h-16 rounded-xl object-cover object-top shrink-0 border border-slate-100" />
                       <div className="flex-1 min-w-0">
                         <h4 className="font-bold text-xs sm:text-sm truncate text-slate-900">{doc.name}</h4>
                         <p className="text-[11px] text-slate-500 truncate">{doc.specialization}</p>

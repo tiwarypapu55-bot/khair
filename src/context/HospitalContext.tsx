@@ -1,26 +1,32 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   Doctor, Employee, Department, Facility, GalleryItem, Notice,
-  EventItem, FeedbackItem, Appointment, BusinessSettings, SliderSetting, LogoSettings, FlashAnnouncement
+  EventItem, EventRegistration, FeedbackItem, Appointment, BusinessSettings, SliderSetting, LogoSettings, FlashAnnouncement
 } from '../types';
 import {
   INITIAL_DOCTORS, INITIAL_EMPLOYEES, INITIAL_DEPARTMENTS,
   INITIAL_FACILITIES, INITIAL_GALLERY, INITIAL_NOTICES,
   INITIAL_EVENTS, INITIAL_FEEDBACK, INITIAL_APPOINTMENTS,
-  INITIAL_BUSINESS_SETTINGS, INITIAL_SLIDER_SETTINGS, INITIAL_LOGO_SETTINGS, INITIAL_FLASH_ANNOUNCEMENT
+  INITIAL_BUSINESS_SETTINGS, INITIAL_SLIDER_SETTINGS, INITIAL_LOGO_SETTINGS, INITIAL_FLASH_ANNOUNCEMENT,
+  STATIC_HERO_BANNERS, getFixedDoctorImage
 } from '../data/initialData';
 import {
   fetchDoctorsFromSupabase, saveDoctorToSupabase, deleteDoctorFromSupabase,
+  fetchDepartmentsFromSupabase, saveDepartmentToSupabase, deleteDepartmentFromSupabase,
+  fetchFacilitiesFromSupabase, saveFacilityToSupabase,
   fetchEmployeesFromSupabase, saveEmployeeToSupabase, deleteEmployeeFromSupabase,
   fetchNoticesFromSupabase, saveNoticeToSupabase, deleteNoticeFromSupabase,
-  fetchEventsFromSupabase, saveEventToSupabase, deleteEventFromSupabase,
+  fetchEventsFromSupabase, saveEventToSupabase, deleteEventFromSupabase, saveEventRegistrationToSupabase,
   fetchGalleryFromSupabase, saveGalleryItemToSupabase, deleteGalleryItemFromSupabase,
   fetchFeedbacksFromSupabase, saveFeedbackToSupabase, deleteFeedbackFromSupabase,
   fetchAppointmentsFromSupabase, saveAppointmentToSupabase,
   fetchSettingFromSupabase, saveSettingToSupabase
 } from '../lib/supabaseSync';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { serverSync, SyncState } from '../lib/serverSync';
+import { formatLocalDateISO } from '../utils/scheduleSlots';
 
-export type AdminTabType = 'home' | 'doctor-list' | 'employee' | 'gallery' | 'notice' | 'events' | 'feedback' | 'settings';
+export type AdminTabType = 'home' | 'departments' | 'doctor-list' | 'employee' | 'gallery' | 'notice' | 'events' | 'feedback' | 'settings';
 
 interface HospitalContextType {
   doctors: Doctor[];
@@ -30,14 +36,22 @@ interface HospitalContextType {
   gallery: GalleryItem[];
   notices: Notice[];
   events: EventItem[];
+  eventRegistrations: EventRegistration[];
   feedbacks: FeedbackItem[];
   appointments: Appointment[];
   isSupabaseConnected: boolean;
+
+  // Real-Time Cross-Device & Server Synchronization
+  syncState: SyncState;
+  forceSyncWithServer: () => Promise<void>;
+  syncNotice: string | null;
+  clearSyncNotice: () => void;
 
   // Settings
   businessSettings: BusinessSettings;
   updateBusinessSettings: (settings: Partial<BusinessSettings>) => void;
   sliderSettings: SliderSetting[];
+  isBannerEditingInactive: boolean;
   addSlider: (slide: Omit<SliderSetting, 'id'>) => void;
   updateSlider: (id: string, slide: Partial<SliderSetting>) => void;
   deleteSlider: (id: string) => void;
@@ -50,10 +64,16 @@ interface HospitalContextType {
   isFlashModalOpen: boolean;
   setIsFlashModalOpen: (open: boolean) => void;
 
+  // Department CRUD
+  addDepartment: (dept: Omit<Department, 'id'>) => void;
+  updateDepartment: (id: string, dept: Partial<Department>) => void;
+  deleteDepartment: (id: string) => void;
+
   // Doctor CRUD
   addDoctor: (doc: Omit<Doctor, 'id'>) => void;
   updateDoctor: (id: string, doc: Partial<Doctor>) => void;
   deleteDoctor: (id: string) => void;
+  isDoctorPhotoEditingInactive: boolean;
 
   // Employee CRUD
   addEmployee: (emp: Omit<Employee, 'id' | 'employeeId'>) => void;
@@ -73,7 +93,10 @@ interface HospitalContextType {
   addEvent: (evt: Omit<EventItem, 'id' | 'registeredCount'>) => void;
   updateEvent: (id: string, evt: Partial<EventItem>) => void;
   deleteEvent: (id: string) => void;
-  registerForEvent: (eventId: string) => void;
+  registerForEvent: (
+    eventId: string,
+    details?: { attendeeName?: string; attendeePhone?: string; attendeeEmail?: string }
+  ) => void;
 
   // Feedback CRUD
   addFeedback: (fb: Omit<FeedbackItem, 'id' | 'date' | 'status'>) => void;
@@ -117,10 +140,25 @@ const HospitalContext = createContext<HospitalContextType | undefined>(undefined
 
 export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSupabaseConnected, setIsSupabaseConnected] = useState<boolean>(false);
+  const [syncState, setSyncState] = useState<SyncState>(serverSync.getState());
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+
+  const clearSyncNotice = () => setSyncNotice(null);
 
   const [doctors, setDoctors] = useState<Doctor[]>(() => {
     const saved = localStorage.getItem('khair_doctors_v4');
-    return saved ? JSON.parse(saved) : INITIAL_DOCTORS;
+    if (saved) {
+      try {
+        const parsed: Doctor[] = JSON.parse(saved);
+        return parsed.map(d => ({
+          ...d,
+          image: getFixedDoctorImage(d.id, d.image)
+        }));
+      } catch (e) {
+        console.warn('Failed to parse doctors:', e);
+      }
+    }
+    return INITIAL_DOCTORS;
   });
 
   const [employees, setEmployees] = useState<Employee[]>(() => {
@@ -128,8 +166,30 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return saved ? JSON.parse(saved) : INITIAL_EMPLOYEES;
   });
 
-  const [departments] = useState<Department[]>(INITIAL_DEPARTMENTS);
-  const [facilities] = useState<Facility[]>(INITIAL_FACILITIES);
+  const [departments, setDepartments] = useState<Department[]>(() => {
+    const saved = localStorage.getItem('khair_departments_v1');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        console.warn('Failed to parse departments:', e);
+      }
+    }
+    return INITIAL_DEPARTMENTS;
+  });
+  const [facilities, setFacilities] = useState<Facility[]>(() => {
+    const saved = localStorage.getItem('khair_facilities_v1');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        console.warn('Failed to parse facilities:', e);
+      }
+    }
+    return INITIAL_FACILITIES;
+  });
 
   const [gallery, setGallery] = useState<GalleryItem[]>(() => {
     const saved = localStorage.getItem('khair_gallery');
@@ -144,6 +204,19 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [events, setEvents] = useState<EventItem[]>(() => {
     const saved = localStorage.getItem('khair_events');
     return saved ? JSON.parse(saved) : INITIAL_EVENTS;
+  });
+
+  const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>(() => {
+    const saved = localStorage.getItem('khair_event_registrations_v1');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {
+        console.warn('Failed to parse event registrations:', e);
+      }
+    }
+    return [];
   });
 
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>(() => {
@@ -174,28 +247,20 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return INITIAL_BUSINESS_SETTINGS;
   });
 
-  const [sliderSettings, setSliderSettings] = useState<SliderSetting[]>(() => {
-    const saved = localStorage.getItem('khair_slider_settings_v5');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.warn('Failed to parse slider settings:', e);
-      }
-    }
-    return INITIAL_SLIDER_SETTINGS;
-  });
+  // Hero Banners (Fixed as static banners presently uploaded)
+  const [sliderSettings, setSliderSettings] = useState<SliderSetting[]>(STATIC_HERO_BANNERS);
 
   const [logoSettings, setLogoSettings] = useState<LogoSettings>(() => {
-    const saved = localStorage.getItem('khair_logo_settings_v2') || localStorage.getItem('khair_logo_settings');
+    const saved = localStorage.getItem('khair_logo_settings_v3') || localStorage.getItem('khair_logo_settings_v2');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        const isOldLogo = (url?: string) => !url || url.includes('khair_hospital_logo_1786262717216') || url.includes('khair_hospital_logo');
         return {
           ...INITIAL_LOGO_SETTINGS,
           ...parsed,
-          headerLogoUrl: parsed.headerLogoUrl || INITIAL_LOGO_SETTINGS.headerLogoUrl,
-          footerLogoUrl: parsed.footerLogoUrl || INITIAL_LOGO_SETTINGS.footerLogoUrl
+          headerLogoUrl: isOldLogo(parsed.headerLogoUrl) ? INITIAL_LOGO_SETTINGS.headerLogoUrl : parsed.headerLogoUrl,
+          footerLogoUrl: isOldLogo(parsed.footerLogoUrl) ? INITIAL_LOGO_SETTINGS.footerLogoUrl : parsed.footerLogoUrl
         };
       } catch (e) {
         console.warn('Failed to parse logo settings:', e);
@@ -266,136 +331,462 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState<boolean>(false);
   const [isEmployeePortalOpen, setIsEmployeePortalOpen] = useState<boolean>(false);
 
+  // Auto-dismiss sync notice after 5 seconds
+  useEffect(() => {
+    if (!syncNotice) return;
+    const t = setTimeout(() => {
+      setSyncNotice(null);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [syncNotice]);
+
+  // Real-time synchronization across devices, browsers, and the server
+  useEffect(() => {
+    serverSync.connect();
+    const unsubState = serverSync.onStateChange((state) => {
+      setSyncState(state);
+    });
+
+    const unsubEvents = serverSync.onSyncEvent(({ mutation, isRemote }) => {
+      if (!isRemote) return;
+      const { type, payload } = mutation;
+      switch (type) {
+        case 'doctor:add':
+          if (payload?.id) {
+            setDoctors(prev => prev.some(d => d.id === payload.id) ? prev : [
+              { ...payload, image: getFixedDoctorImage(payload.id, payload.image) },
+              ...prev
+            ]);
+            setSyncNotice(`Dr. ${payload.name || 'Doctor'} added via live sync`);
+          }
+          break;
+        case 'doctor:update':
+          if (payload?.id) {
+            setDoctors(prev => prev.map(d => d.id === payload.id ? {
+              ...d,
+              ...payload,
+              image: getFixedDoctorImage(d.id, d.image) // Fixed static photo locked
+            } : d));
+          }
+          break;
+        case 'doctor:delete':
+          if (payload?.id) {
+            setDoctors(prev => prev.filter(d => d.id !== payload.id));
+          }
+          break;
+        case 'department:add':
+          if (payload?.id) {
+            setDepartments(prev => prev.some(dept => dept.id === payload.id) ? prev : [...prev, payload]);
+            setSyncNotice(`Department "${payload.name || ''}" added via live sync`);
+          }
+          break;
+        case 'department:update':
+          if (payload?.id) {
+            setDepartments(prev => prev.map(dept => dept.id === payload.id ? { ...dept, ...payload } : dept));
+            setSyncNotice(`Department "${payload.name || ''}" updated across devices`);
+          }
+          break;
+        case 'department:delete':
+          if (payload?.id) {
+            setDepartments(prev => prev.filter(dept => dept.id !== payload.id));
+          }
+          break;
+        case 'facility:add':
+        case 'facility:update':
+          if (payload?.id) {
+            setFacilities(prev => {
+              const exists = prev.some(f => f.id === payload.id);
+              return exists ? prev.map(f => f.id === payload.id ? { ...f, ...payload } : f) : [...prev, payload];
+            });
+          }
+          break;
+        case 'employee:add':
+          if (payload?.id) {
+            setEmployees(prev => prev.some(e => e.id === payload.id) ? prev : [payload, ...prev]);
+          }
+          break;
+        case 'employee:update':
+          if (payload?.id) {
+            setEmployees(prev => prev.map(e => e.id === payload.id ? { ...e, ...payload } : e));
+          }
+          break;
+        case 'employee:delete':
+          if (payload?.id) {
+            setEmployees(prev => prev.filter(e => e.id !== payload.id));
+          }
+          break;
+        case 'appointment:add':
+          if (payload?.id) {
+            setAppointments(prev => prev.some(a => a.id === payload.id) ? prev : [payload, ...prev]);
+            setSyncNotice(`New appointment #${payload.appointmentNumber || ''} synced from patient device`);
+          }
+          break;
+        case 'appointment:update':
+          if (payload?.id) {
+            setAppointments(prev => prev.map(a => a.id === payload.id ? { ...a, ...payload } : a));
+            setSyncNotice('Appointment update synchronized across devices');
+          }
+          break;
+        case 'appointment:delete':
+          if (payload?.id) {
+            setAppointments(prev => prev.filter(a => a.id !== payload.id));
+          }
+          break;
+        case 'notice:add':
+          if (payload?.id) {
+            setNotices(prev => prev.some(n => n.id === payload.id) ? prev : [payload, ...prev]);
+            setSyncNotice(`Notice "${payload.title || ''}" synced`);
+          }
+          break;
+        case 'notice:update':
+          if (payload?.id) {
+            setNotices(prev => prev.map(n => n.id === payload.id ? { ...n, ...payload } : n));
+          }
+          break;
+        case 'notice:delete':
+          if (payload?.id) {
+            setNotices(prev => prev.filter(n => n.id !== payload.id));
+          }
+          break;
+        case 'event:add':
+          if (payload?.id) {
+            setEvents(prev => prev.some(e => e.id === payload.id) ? prev : [payload, ...prev]);
+          }
+          break;
+        case 'event:update':
+          if (payload?.id) {
+            setEvents(prev => prev.map(e => e.id === payload.id ? { ...e, ...payload } : e));
+          }
+          break;
+        case 'event:delete':
+          if (payload?.id) {
+            setEvents(prev => prev.filter(e => e.id !== payload.id));
+          }
+          break;
+        case 'event:register':
+          if (payload?.eventId) {
+            setEventRegistrations(prev =>
+              payload.id && prev.some(r => r.id === payload.id) ? prev : [payload, ...prev]
+            );
+            setEvents(prev =>
+              prev.map(e =>
+                e.id === payload.eventId
+                  ? {
+                      ...e,
+                      registeredCount:
+                        typeof payload.registeredCount === 'number'
+                          ? payload.registeredCount
+                          : e.registeredCount + 1,
+                    }
+                  : e
+              )
+            );
+          }
+          break;
+        case 'gallery:add':
+          if (payload?.id) {
+            setGallery(prev => prev.some(g => g.id === payload.id) ? prev : [payload, ...prev]);
+          }
+          break;
+        case 'gallery:delete':
+          if (payload?.id) {
+            setGallery(prev => prev.filter(g => g.id !== payload.id));
+          }
+          break;
+        case 'feedback:add':
+          if (payload?.id) {
+            setFeedbacks(prev => prev.some(f => f.id === payload.id) ? prev : [payload, ...prev]);
+            setSyncNotice(`New feedback received from ${payload.patientName || 'patient'}`);
+          }
+          break;
+        case 'feedback:update':
+          if (payload?.id) {
+            setFeedbacks(prev => prev.map(f => f.id === payload.id ? { ...f, ...payload } : f));
+          }
+          break;
+        case 'feedback:delete':
+          if (payload?.id) {
+            setFeedbacks(prev => prev.filter(f => f.id !== payload.id));
+          }
+          break;
+        case 'business_settings:update':
+          if (payload) {
+            setBusinessSettings(prev => ({ ...prev, ...payload }));
+            setSyncNotice('Hospital business info updated across devices');
+          }
+          break;
+        case 'logo_settings:update':
+          if (payload) setLogoSettings(prev => ({ ...prev, ...payload }));
+          break;
+        case 'flash_announcement:update':
+          if (payload) setFlashAnnouncement(prev => ({ ...prev, ...payload }));
+          break;
+        case 'sync:init':
+          if (payload) {
+            if (Array.isArray(payload.doctors) && payload.doctors.length > 0) {
+              setDoctors(payload.doctors.map((d: any) => ({ ...d, image: getFixedDoctorImage(d.id, d.image) })));
+            }
+            if (Array.isArray(payload.departments) && payload.departments.length > 0) setDepartments(payload.departments);
+            if (Array.isArray(payload.facilities) && payload.facilities.length > 0) setFacilities(payload.facilities);
+            if (Array.isArray(payload.employees) && payload.employees.length > 0) setEmployees(payload.employees);
+            if (Array.isArray(payload.appointments) && payload.appointments.length > 0) setAppointments(payload.appointments);
+            if (Array.isArray(payload.notices) && payload.notices.length > 0) setNotices(payload.notices);
+            if (Array.isArray(payload.events) && payload.events.length > 0) setEvents(payload.events);
+            if (Array.isArray(payload.eventRegistrations)) setEventRegistrations(payload.eventRegistrations);
+            if (Array.isArray(payload.gallery) && payload.gallery.length > 0) setGallery(payload.gallery);
+            if (Array.isArray(payload.feedbacks) && payload.feedbacks.length > 0) setFeedbacks(payload.feedbacks);
+            if (payload.businessSettings) setBusinessSettings(payload.businessSettings);
+            if (payload.logoSettings) setLogoSettings(payload.logoSettings);
+            if (payload.flashAnnouncement) setFlashAnnouncement(payload.flashAnnouncement);
+          }
+          break;
+      }
+    });
+
+    async function initialServerHydration() {
+      const res = await serverSync.fetchServerData();
+      if (res && res.data) {
+        const { data } = res;
+        const hasData = (data.doctors && data.doctors.length > 0) ||
+                        (data.departments && data.departments.length > 0) ||
+                        (data.facilities && data.facilities.length > 0) ||
+                        (data.appointments && data.appointments.length > 0) ||
+                        Boolean(data.businessSettings);
+
+        if (hasData) {
+          if (data.doctors && data.doctors.length > 0) {
+            setDoctors(data.doctors.map((d: any) => ({ ...d, image: getFixedDoctorImage(d.id, d.image) })));
+          }
+          if (data.departments && data.departments.length > 0) setDepartments(data.departments);
+          if (data.facilities && data.facilities.length > 0) setFacilities(data.facilities);
+          if (data.employees && data.employees.length > 0) setEmployees(data.employees);
+          if (data.appointments && data.appointments.length > 0) setAppointments(data.appointments);
+          if (data.notices && data.notices.length > 0) setNotices(data.notices);
+          if (data.events && data.events.length > 0) setEvents(data.events);
+          if (Array.isArray(data.eventRegistrations)) setEventRegistrations(data.eventRegistrations);
+          if (data.gallery && data.gallery.length > 0) setGallery(data.gallery);
+          if (data.feedbacks && data.feedbacks.length > 0) setFeedbacks(data.feedbacks);
+          if (data.businessSettings) setBusinessSettings(data.businessSettings);
+          if (data.logoSettings) setLogoSettings(data.logoSettings);
+          if (data.flashAnnouncement) setFlashAnnouncement(data.flashAnnouncement);
+        } else {
+          // Bootstrap server SQLite database with initial data
+          serverSync.bootstrapServer({
+            doctors: INITIAL_DOCTORS,
+            employees: INITIAL_EMPLOYEES,
+            departments: INITIAL_DEPARTMENTS,
+            facilities: INITIAL_FACILITIES,
+            gallery: INITIAL_GALLERY,
+            notices: INITIAL_NOTICES,
+            events: INITIAL_EVENTS,
+            eventRegistrations: [],
+            feedbacks: INITIAL_FEEDBACK,
+            appointments: INITIAL_APPOINTMENTS,
+            businessSettings: INITIAL_BUSINESS_SETTINGS,
+            logoSettings: INITIAL_LOGO_SETTINGS,
+            flashAnnouncement: INITIAL_FLASH_ANNOUNCEMENT,
+          });
+        }
+      }
+    }
+
+    initialServerHydration();
+
+    return () => {
+      unsubState();
+      unsubEvents();
+    };
+  }, []);
+
+  const forceSyncWithServer = async () => {
+    const res = await serverSync.fetchServerData();
+    if (res && res.data) {
+      const { data } = res;
+      if (data.doctors && data.doctors.length > 0) {
+        setDoctors(data.doctors.map((d: any) => ({ ...d, image: getFixedDoctorImage(d.id, d.image) })));
+      }
+      if (data.departments && data.departments.length > 0) setDepartments(data.departments);
+      if (data.facilities && data.facilities.length > 0) setFacilities(data.facilities);
+      if (data.employees && data.employees.length > 0) setEmployees(data.employees);
+      if (data.appointments && data.appointments.length > 0) setAppointments(data.appointments);
+      if (data.notices && data.notices.length > 0) setNotices(data.notices);
+      if (data.events && data.events.length > 0) setEvents(data.events);
+      if (Array.isArray(data.eventRegistrations)) setEventRegistrations(data.eventRegistrations);
+      if (data.gallery && data.gallery.length > 0) setGallery(data.gallery);
+      if (data.feedbacks && data.feedbacks.length > 0) setFeedbacks(data.feedbacks);
+      if (data.businessSettings) setBusinessSettings(data.businessSettings);
+      if (data.logoSettings) setLogoSettings(data.logoSettings);
+      if (data.flashAnnouncement) setFlashAnnouncement(data.flashAnnouncement);
+      setSyncNotice('Full synchronization with server complete');
+    }
+  };
+
   // Initial Sync from Supabase
   useEffect(() => {
     async function initSupabaseData() {
+      if (!isSupabaseConfigured) {
+        setIsSupabaseConnected(false);
+        return;
+      }
+
       let isConnected = false;
 
-      // 1. Doctors
-      const supabaseDocs = await fetchDoctorsFromSupabase();
-      if (supabaseDocs !== null) {
-        isConnected = true;
-        if (supabaseDocs.length > 0) {
-          setDoctors(supabaseDocs);
-        } else {
-          for (const d of INITIAL_DOCTORS) {
-            await saveDoctorToSupabase(d);
+      try {
+        // 1. Doctors
+        const supabaseDocs = await fetchDoctorsFromSupabase();
+        if (supabaseDocs !== null) {
+          isConnected = true;
+          if (supabaseDocs.length > 0) {
+            setDoctors(supabaseDocs.map(d => ({
+              ...d,
+              image: getFixedDoctorImage(d.id, d.image)
+            })));
+          } else {
+            for (const d of INITIAL_DOCTORS) {
+              await saveDoctorToSupabase(d);
+            }
           }
         }
-      }
 
-      // 2. Employees
-      const supabaseEmps = await fetchEmployeesFromSupabase();
-      if (supabaseEmps !== null) {
-        isConnected = true;
-        if (supabaseEmps.length > 0) {
-          setEmployees(supabaseEmps);
-        } else {
-          for (const e of INITIAL_EMPLOYEES) {
-            await saveEmployeeToSupabase(e);
+        // 2. Employees
+        const supabaseEmps = await fetchEmployeesFromSupabase();
+        if (supabaseEmps !== null) {
+          isConnected = true;
+          if (supabaseEmps.length > 0) {
+            setEmployees(supabaseEmps);
+          } else {
+            for (const e of INITIAL_EMPLOYEES) {
+              await saveEmployeeToSupabase(e);
+            }
           }
         }
-      }
 
-      // 3. Notices
-      const supabaseNotices = await fetchNoticesFromSupabase();
-      if (supabaseNotices !== null) {
-        isConnected = true;
-        if (supabaseNotices.length > 0) {
-          setNotices(supabaseNotices);
-        } else {
-          for (const n of INITIAL_NOTICES) {
-            await saveNoticeToSupabase(n);
+        // 3. Notices
+        const supabaseNotices = await fetchNoticesFromSupabase();
+        if (supabaseNotices !== null) {
+          isConnected = true;
+          if (supabaseNotices.length > 0) {
+            setNotices(supabaseNotices);
+          } else {
+            for (const n of INITIAL_NOTICES) {
+              await saveNoticeToSupabase(n);
+            }
           }
         }
-      }
 
-      // 4. Events
-      const supabaseEvents = await fetchEventsFromSupabase();
-      if (supabaseEvents !== null) {
-        isConnected = true;
-        if (supabaseEvents.length > 0) {
-          setEvents(supabaseEvents);
-        } else {
-          for (const evt of INITIAL_EVENTS) {
-            await saveEventToSupabase(evt);
+        // 4. Events
+        const supabaseEvents = await fetchEventsFromSupabase();
+        if (supabaseEvents !== null) {
+          isConnected = true;
+          if (supabaseEvents.length > 0) {
+            setEvents(supabaseEvents);
+          } else {
+            for (const evt of INITIAL_EVENTS) {
+              await saveEventToSupabase(evt);
+            }
           }
         }
-      }
 
-      // 5. Gallery
-      const supabaseGallery = await fetchGalleryFromSupabase();
-      if (supabaseGallery !== null) {
-        isConnected = true;
-        if (supabaseGallery.length > 0) {
-          setGallery(supabaseGallery);
-        } else {
-          for (const g of INITIAL_GALLERY) {
-            await saveGalleryItemToSupabase(g);
+        // 5. Gallery
+        const supabaseGallery = await fetchGalleryFromSupabase();
+        if (supabaseGallery !== null) {
+          isConnected = true;
+          if (supabaseGallery.length > 0) {
+            setGallery(supabaseGallery);
+          } else {
+            for (const g of INITIAL_GALLERY) {
+              await saveGalleryItemToSupabase(g);
+            }
           }
         }
-      }
 
-      // 6. Feedbacks
-      const supabaseFeedbacks = await fetchFeedbacksFromSupabase();
-      if (supabaseFeedbacks !== null) {
-        isConnected = true;
-        if (supabaseFeedbacks.length > 0) {
-          setFeedbacks(supabaseFeedbacks);
-        } else {
-          for (const fb of INITIAL_FEEDBACK) {
-            await saveFeedbackToSupabase(fb);
+        // 6. Feedbacks
+        const supabaseFeedbacks = await fetchFeedbacksFromSupabase();
+        if (supabaseFeedbacks !== null) {
+          isConnected = true;
+          if (supabaseFeedbacks.length > 0) {
+            setFeedbacks(supabaseFeedbacks);
+          } else {
+            for (const fb of INITIAL_FEEDBACK) {
+              await saveFeedbackToSupabase(fb);
+            }
           }
         }
-      }
 
-      // 7. Appointments
-      const supabaseApps = await fetchAppointmentsFromSupabase();
-      if (supabaseApps !== null) {
-        isConnected = true;
-        if (supabaseApps.length > 0) {
-          setAppointments(supabaseApps);
-        } else {
-          for (const app of INITIAL_APPOINTMENTS) {
-            await saveAppointmentToSupabase(app);
+        // 7. Appointments
+        const supabaseApps = await fetchAppointmentsFromSupabase();
+        if (supabaseApps !== null) {
+          isConnected = true;
+          if (supabaseApps.length > 0) {
+            setAppointments(supabaseApps);
+          } else {
+            for (const app of INITIAL_APPOINTMENTS) {
+              await saveAppointmentToSupabase(app);
+            }
           }
         }
-      }
 
-      // 8. Settings
-      const sbBiz = await fetchSettingFromSupabase<BusinessSettings>('business_settings');
-      if (sbBiz) {
-        setBusinessSettings(sbBiz);
-        isConnected = true;
-      } else {
-        await saveSettingToSupabase('business_settings', INITIAL_BUSINESS_SETTINGS);
-      }
+        // 8. Settings - only if Supabase is connected and responding
+        if (isConnected) {
+          const sbBiz = await fetchSettingFromSupabase<BusinessSettings>('business_settings');
+          if (sbBiz) {
+            setBusinessSettings(sbBiz);
+          } else {
+            await saveSettingToSupabase('business_settings', INITIAL_BUSINESS_SETTINGS);
+          }
 
-      const sbLogo = await fetchSettingFromSupabase<LogoSettings>('logo_settings');
-      if (sbLogo) {
-        setLogoSettings(sbLogo);
-        isConnected = true;
-      } else {
-        await saveSettingToSupabase('logo_settings', INITIAL_LOGO_SETTINGS);
-      }
+          const sbLogo = await fetchSettingFromSupabase<LogoSettings>('logo_settings');
+          if (sbLogo) {
+            setLogoSettings(sbLogo);
+          } else {
+            await saveSettingToSupabase('logo_settings', INITIAL_LOGO_SETTINGS);
+          }
 
-      const sbSliders = await fetchSettingFromSupabase<SliderSetting[]>('slider_settings');
-      if (sbSliders) {
-        setSliderSettings(sbSliders);
-        isConnected = true;
-      } else {
-        await saveSettingToSupabase('slider_settings', INITIAL_SLIDER_SETTINGS);
-      }
+          // Hero Banners are static: preserve STATIC_HERO_BANNERS
+          setSliderSettings(STATIC_HERO_BANNERS);
 
-      const sbFlash = await fetchSettingFromSupabase<FlashAnnouncement>('flash_announcement');
-      if (sbFlash) {
-        setFlashAnnouncement(sbFlash);
-        isConnected = true;
-      } else {
-        await saveSettingToSupabase('flash_announcement', INITIAL_FLASH_ANNOUNCEMENT);
-      }
+          const sbFlash = await fetchSettingFromSupabase<FlashAnnouncement>('flash_announcement');
+          if (sbFlash) {
+            setFlashAnnouncement(sbFlash);
+          } else {
+            await saveSettingToSupabase('flash_announcement', INITIAL_FLASH_ANNOUNCEMENT);
+          }
 
-      setIsSupabaseConnected(isConnected);
+          // 8. Departments Table
+          const supabaseDepts = await fetchDepartmentsFromSupabase();
+          if (supabaseDepts !== null && supabaseDepts.length > 0) {
+            setDepartments(supabaseDepts);
+          } else {
+            const sbDepartments = await fetchSettingFromSupabase<Department[]>('departments_list');
+            if (Array.isArray(sbDepartments) && sbDepartments.length > 0) {
+              setDepartments(sbDepartments);
+              for (const dept of sbDepartments) {
+                await saveDepartmentToSupabase(dept);
+              }
+            } else {
+              for (const dept of INITIAL_DEPARTMENTS) {
+                await saveDepartmentToSupabase(dept);
+              }
+              await saveSettingToSupabase('departments_list', INITIAL_DEPARTMENTS);
+            }
+          }
+
+          // 9. Facilities Table
+          const supabaseFacs = await fetchFacilitiesFromSupabase();
+          if (supabaseFacs !== null && supabaseFacs.length > 0) {
+            setFacilities(supabaseFacs);
+          } else {
+            for (const fac of INITIAL_FACILITIES) {
+              await saveFacilityToSupabase(fac);
+            }
+          }
+        }
+
+        setIsSupabaseConnected(isConnected);
+      } catch (err) {
+        console.warn('Supabase initialization note:', err);
+        setIsSupabaseConnected(false);
+      }
     }
 
     initSupabaseData();
@@ -417,6 +808,22 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       console.warn('Failed to save doctors to localStorage:', e);
     }
   }, [doctors]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('khair_departments_v1', JSON.stringify(departments));
+    } catch (e) {
+      console.warn('Failed to save departments to localStorage:', e);
+    }
+  }, [departments]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('khair_facilities_v1', JSON.stringify(facilities));
+    } catch (e) {
+      console.warn('Failed to save facilities to localStorage:', e);
+    }
+  }, [facilities]);
 
   useEffect(() => {
     try {
@@ -452,6 +859,14 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     try {
+      localStorage.setItem('khair_event_registrations_v1', JSON.stringify(eventRegistrations));
+    } catch (e) {
+      console.warn('Failed to save event registrations to localStorage:', e);
+    }
+  }, [eventRegistrations]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('khair_feedbacks', JSON.stringify(feedbacks));
     } catch (e) {
       console.warn('Failed to save feedbacks to localStorage:', e);
@@ -484,7 +899,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     try {
-      localStorage.setItem('khair_logo_settings_v2', JSON.stringify(logoSettings));
+      localStorage.setItem('khair_logo_settings_v3', JSON.stringify(logoSettings));
     } catch (e) {
       console.warn('Failed to save logo settings to localStorage:', e);
     }
@@ -503,47 +918,30 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setBusinessSettings(prev => {
       const updated = { ...prev, ...settings };
       saveSettingToSupabase('business_settings', updated);
+      serverSync.sendMutation('business_settings:update', updated);
       return updated;
     });
   };
 
-  // Slider Handlers
-  const addSlider = (slide: Omit<SliderSetting, 'id'>) => {
-    const newSlide: SliderSetting = { ...slide, id: `slide-${Date.now()}` };
-    setSliderSettings(prev => {
-      const updated = [...prev, newSlide];
-      saveSettingToSupabase('slider_settings', updated);
-      return updated;
-    });
+  // Slider Handlers - Inactive till next command (Static Banners Mode Active)
+  const addSlider = (_slide: Omit<SliderSetting, 'id'>) => {
+    console.warn('Banner creation is inactive: static banners are locked till next command.');
   };
 
-  const updateSlider = (id: string, slideData: Partial<SliderSetting>) => {
-    setSliderSettings(prev => {
-      const updated = prev.map(s => s.id === id ? { ...s, ...slideData } : s);
-      saveSettingToSupabase('slider_settings', updated);
-      return updated;
-    });
+  const updateSlider = (_id: string, _slideData: Partial<SliderSetting>) => {
+    console.warn('Banner editing is inactive: static banners are locked till next command.');
   };
 
-  const deleteSlider = (id: string) => {
-    setSliderSettings(prev => {
-      const updated = prev.filter(s => s.id !== id);
-      saveSettingToSupabase('slider_settings', updated);
-      return updated;
-    });
+  const deleteSlider = (_id: string) => {
+    console.warn('Banner deletion is inactive: static banners are locked till next command.');
   };
 
-  const toggleSliderStatus = (id: string) => {
-    setSliderSettings(prev => {
-      const updated = prev.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s);
-      saveSettingToSupabase('slider_settings', updated);
-      return updated;
-    });
+  const toggleSliderStatus = (_id: string) => {
+    console.warn('Banner visibility toggle is inactive: static banners are locked till next command.');
   };
 
-  const reorderSliders = (newOrder: SliderSetting[]) => {
-    setSliderSettings(newOrder);
-    saveSettingToSupabase('slider_settings', newOrder);
+  const reorderSliders = (_newOrder: SliderSetting[]) => {
+    console.warn('Banner reordering is inactive: static banners are locked till next command.');
   };
 
   // Logo Handlers
@@ -551,6 +949,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLogoSettings(prev => {
       const updated = { ...prev, ...settings };
       saveSettingToSupabase('logo_settings', updated);
+      serverSync.sendMutation('logo_settings:update', updated);
       return updated;
     });
   };
@@ -560,22 +959,30 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setFlashAnnouncement(prev => {
       const updated = { ...prev, ...announcement, updatedAt: new Date().toISOString() };
       saveSettingToSupabase('flash_announcement', updated);
+      serverSync.sendMutation('flash_announcement:update', updated);
       return updated;
     });
   };
 
   // Doctor CRUD
   const addDoctor = (doc: Omit<Doctor, 'id'>) => {
-    const newDoc: Doctor = { ...doc, id: `doc-${Date.now()}` };
+    const newId = `doc-${Date.now()}`;
+    const newDoc: Doctor = { ...doc, id: newId, image: getFixedDoctorImage(newId, doc.image) };
     setDoctors(prev => [newDoc, ...prev]);
     saveDoctorToSupabase(newDoc);
+    serverSync.sendMutation('doctor:add', newDoc);
   };
 
   const updateDoctor = (id: string, docData: Partial<Doctor>) => {
     setDoctors(prev => prev.map(d => {
       if (d.id === id) {
-        const updated = { ...d, ...docData };
+        const updated = {
+          ...d,
+          ...docData,
+          image: getFixedDoctorImage(d.id, d.image) // Fixed static photo locked
+        };
         saveDoctorToSupabase(updated);
+        serverSync.sendMutation('doctor:update', updated);
         return updated;
       }
       return d;
@@ -585,6 +992,48 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const deleteDoctor = (id: string) => {
     setDoctors(prev => prev.filter(d => d.id !== id));
     deleteDoctorFromSupabase(id);
+    serverSync.sendMutation('doctor:delete', { id });
+  };
+
+  // Department CRUD
+  const addDepartment = (dept: Omit<Department, 'id'>) => {
+    const newDept: Department = { ...dept, id: `dept-${Date.now()}` };
+    setDepartments(prev => {
+      const updatedList = [...prev, newDept];
+      saveSettingToSupabase('departments_list', updatedList);
+      return updatedList;
+    });
+    saveDepartmentToSupabase(newDept);
+    serverSync.sendMutation('department:add', newDept);
+  };
+
+  const updateDepartment = (id: string, deptData: Partial<Department>) => {
+    setDepartments(prev => {
+      let updatedItem: Department | null = null;
+      const updatedList = prev.map(d => {
+        if (d.id === id) {
+          updatedItem = { ...d, ...deptData };
+          return updatedItem;
+        }
+        return d;
+      });
+      if (updatedItem) {
+        saveSettingToSupabase('departments_list', updatedList);
+        saveDepartmentToSupabase(updatedItem);
+        serverSync.sendMutation('department:update', updatedItem);
+      }
+      return updatedList;
+    });
+  };
+
+  const deleteDepartment = (id: string) => {
+    setDepartments(prev => {
+      const updatedList = prev.filter(d => d.id !== id);
+      saveSettingToSupabase('departments_list', updatedList);
+      return updatedList;
+    });
+    deleteDepartmentFromSupabase(id);
+    serverSync.sendMutation('department:delete', { id });
   };
 
   // Employee CRUD
@@ -594,6 +1043,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const newEmp: Employee = { ...emp, id: `emp-${Date.now()}`, employeeId: empIdStr };
     setEmployees(prev => [newEmp, ...prev]);
     saveEmployeeToSupabase(newEmp);
+    serverSync.sendMutation('employee:add', newEmp);
   };
 
   const updateEmployee = (id: string, empData: Partial<Employee>) => {
@@ -601,6 +1051,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (e.id === id) {
         const updated = { ...e, ...empData };
         saveEmployeeToSupabase(updated);
+        serverSync.sendMutation('employee:update', updated);
         return updated;
       }
       return e;
@@ -610,6 +1061,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const deleteEmployee = (id: string) => {
     setEmployees(prev => prev.filter(e => e.id !== id));
     deleteEmployeeFromSupabase(id);
+    serverSync.sendMutation('employee:delete', { id });
   };
 
   // Gallery CRUD
@@ -617,25 +1069,31 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const newItem: GalleryItem = { ...item, id: `gal-${Date.now()}` };
     setGallery(prev => [newItem, ...prev]);
     saveGalleryItemToSupabase(newItem);
+    serverSync.sendMutation('gallery:add', newItem);
   };
 
   const deleteGalleryItem = (id: string) => {
     setGallery(prev => prev.filter(g => g.id !== id));
     deleteGalleryItemFromSupabase(id);
+    serverSync.sendMutation('gallery:delete', { id });
   };
 
   // Notice CRUD
   const addNotice = (notice: Omit<Notice, 'id'>) => {
-    const newNotice: Notice = { ...notice, id: `not-${Date.now()}` };
+    const normalizedDocUrl = notice.docUrl || notice.attachmentUrl || '';
+    const newNotice: Notice = { ...notice, docUrl: normalizedDocUrl, id: `not-${Date.now()}` };
     setNotices(prev => [newNotice, ...prev]);
     saveNoticeToSupabase(newNotice);
+    serverSync.sendMutation('notice:add', newNotice);
   };
 
   const updateNotice = (id: string, noticeData: Partial<Notice>) => {
     setNotices(prev => prev.map(n => {
       if (n.id === id) {
-        const updated = { ...n, ...noticeData };
+        const normalizedDocUrl = noticeData.docUrl ?? noticeData.attachmentUrl ?? n.docUrl ?? n.attachmentUrl ?? '';
+        const updated = { ...n, ...noticeData, docUrl: normalizedDocUrl };
         saveNoticeToSupabase(updated);
+        serverSync.sendMutation('notice:update', updated);
         return updated;
       }
       return n;
@@ -645,6 +1103,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const deleteNotice = (id: string) => {
     setNotices(prev => prev.filter(n => n.id !== id));
     deleteNoticeFromSupabase(id);
+    serverSync.sendMutation('notice:delete', { id });
   };
 
   // Event CRUD
@@ -652,6 +1111,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const newEvt: EventItem = { ...evt, id: `evt-${Date.now()}`, registeredCount: 0 };
     setEvents(prev => [newEvt, ...prev]);
     saveEventToSupabase(newEvt);
+    serverSync.sendMutation('event:add', newEvt);
   };
 
   const updateEvent = (id: string, evtData: Partial<EventItem>) => {
@@ -659,6 +1119,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (e.id === id) {
         const updated = { ...e, ...evtData };
         saveEventToSupabase(updated);
+        serverSync.sendMutation('event:update', updated);
         return updated;
       }
       return e;
@@ -668,25 +1129,49 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const deleteEvent = (id: string) => {
     setEvents(prev => prev.filter(e => e.id !== id));
     deleteEventFromSupabase(id);
+    serverSync.sendMutation('event:delete', { id });
   };
 
-  const registerForEvent = (eventId: string) => {
+  const registerForEvent = (
+    eventId: string,
+    details?: { attendeeName?: string; attendeePhone?: string; attendeeEmail?: string }
+  ) => {
+    const reg: EventRegistration = {
+      id: `ereg-${Date.now()}`,
+      eventId,
+      attendeeName: details?.attendeeName?.trim() || 'Patient / Visitor',
+      attendeePhone: details?.attendeePhone?.trim() || '',
+      attendeeEmail: details?.attendeeEmail?.trim() || '',
+      registeredAt: new Date().toISOString(),
+    };
+
+    setEventRegistrations(prev => [reg, ...prev]);
+
+    let nextCount: number | undefined;
     setEvents(prev => prev.map(e => {
       if (e.id === eventId) {
-        const updated = { ...e, registeredCount: e.registeredCount + 1 };
+        nextCount = e.registeredCount + 1;
+        const updated = { ...e, registeredCount: nextCount };
         saveEventToSupabase(updated);
         return updated;
       }
       return e;
     }));
+
+    saveEventRegistrationToSupabase(reg);
+    serverSync.sendMutation('event:register', {
+      ...reg,
+      ...(typeof nextCount === 'number' ? { registeredCount: nextCount } : {}),
+    });
   };
 
   // Feedback CRUD
   const addFeedback = (fb: Omit<FeedbackItem, 'id' | 'date' | 'status'>) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatLocalDateISO(new Date());
     const newFb: FeedbackItem = { ...fb, id: `fb-${Date.now()}`, date: today, status: 'Pending' };
     setFeedbacks(prev => [newFb, ...prev]);
     saveFeedbackToSupabase(newFb);
+    serverSync.sendMutation('feedback:add', newFb);
   };
 
   const updateFeedbackStatus = (id: string, status: FeedbackItem['status'], adminNotes?: string) => {
@@ -694,6 +1179,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (f.id === id) {
         const updated = { ...f, status, ...(adminNotes !== undefined ? { adminNotes } : {}) };
         saveFeedbackToSupabase(updated);
+        serverSync.sendMutation('feedback:update', updated);
         return updated;
       }
       return f;
@@ -703,6 +1189,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const deleteFeedback = (id: string) => {
     setFeedbacks(prev => prev.filter(f => f.id !== id));
     deleteFeedbackFromSupabase(id);
+    serverSync.sendMutation('feedback:delete', { id });
   };
 
   // Appointment CRUD
@@ -719,6 +1206,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
     setAppointments(prev => [newApp, ...prev]);
     saveAppointmentToSupabase(newApp);
+    serverSync.sendMutation('appointment:add', newApp);
     return newApp;
   };
 
@@ -727,6 +1215,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (a.id === id) {
         const updated = { ...a, status };
         saveAppointmentToSupabase(updated);
+        serverSync.sendMutation('appointment:update', updated);
         return updated;
       }
       return a;
@@ -738,6 +1227,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (a.id === id) {
         const updated = { ...a, ...appData };
         saveAppointmentToSupabase(updated);
+        serverSync.sendMutation('appointment:update', updated);
         return updated;
       }
       return a;
@@ -757,6 +1247,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           communicationLogs: [{ id: logId, sentByEmployeeName: empName, sentAt, channel, message }, ...existingLogs]
         };
         saveAppointmentToSupabase(updated);
+        serverSync.sendMutation('appointment:update', updated);
         return updated;
       }
       return app;
@@ -801,14 +1292,16 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   return (
     <HospitalContext.Provider
       value={{
-        doctors, employees, departments, facilities, gallery, notices, events, feedbacks, appointments,
+        doctors, employees, departments, facilities, gallery, notices, events, eventRegistrations, feedbacks, appointments,
         isSupabaseConnected,
+        syncState, forceSyncWithServer, syncNotice, clearSyncNotice,
         businessSettings, updateBusinessSettings,
-        sliderSettings, addSlider, updateSlider, deleteSlider, toggleSliderStatus, reorderSliders,
+        sliderSettings, isBannerEditingInactive: true, addSlider, updateSlider, deleteSlider, toggleSliderStatus, reorderSliders,
         logoSettings, updateLogoSettings,
         flashAnnouncement, updateFlashAnnouncement,
         isFlashModalOpen, setIsFlashModalOpen,
-        addDoctor, updateDoctor, deleteDoctor,
+        addDoctor, updateDoctor, deleteDoctor, isDoctorPhotoEditingInactive: true,
+        addDepartment, updateDepartment, deleteDepartment,
         addEmployee, updateEmployee, deleteEmployee,
         addGalleryItem, deleteGalleryItem,
         addNotice, updateNotice, deleteNotice,

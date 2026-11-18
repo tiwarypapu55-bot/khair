@@ -79,6 +79,7 @@ export interface Notice {
   priority: NoticePriority;
   targetAudience: string;
   docUrl?: string;
+  attachmentUrl?: string;
 }
 
 export type EventStatus = 'Upcoming' | 'Ongoing' | 'Completed';
@@ -94,6 +95,15 @@ export interface EventItem {
   registeredCount: number;
   status: EventStatus;
   imageUrl: string;
+}
+
+export interface EventRegistration {
+  id: string;
+  eventId: string;
+  attendeeName: string;
+  attendeePhone: string;
+  attendeeEmail: string;
+  registeredAt: string;
 }
 
 export type FeedbackStatus = 'Pending' | 'In Progress' | 'Resolved';
