@@ -24,6 +24,7 @@ export interface HospitalServerData {
   businessSettings: any;
   logoSettings: any;
   flashAnnouncement: any;
+  sliderSettings?: any[];
 }
 
 class HospitalSQLiteDatabase {
@@ -38,6 +39,7 @@ class HospitalSQLiteDatabase {
     this.db.exec("PRAGMA foreign_keys = ON;");
     this.createTables();
     this.migrateLegacyJsonIfNeeded();
+    this.migrateLegacyMediaPathsIfNeeded();
   }
 
   private createTables() {
@@ -195,6 +197,25 @@ class HospitalSQLiteDatabase {
         updated_at TEXT DEFAULT (datetime('now'))
       );
 
+      CREATE TABLE IF NOT EXISTS hero_banners (
+        id TEXT PRIMARY KEY,
+        tagline TEXT DEFAULT '',
+        title TEXT DEFAULT '',
+        highlight_text TEXT DEFAULT '',
+        hindi_slogan TEXT DEFAULT '',
+        description TEXT DEFAULT '',
+        bg_image TEXT DEFAULT '',
+        badge TEXT DEFAULT '',
+        left_list TEXT DEFAULT '[]',
+        right_list TEXT DEFAULT '[]',
+        service_box TEXT DEFAULT '[]',
+        accent_color TEXT DEFAULT 'from-blue-600 to-indigo-700',
+        is_active INTEGER DEFAULT 1,
+        card_bg_class TEXT DEFAULT '',
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+
       CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(date);
       CREATE INDEX IF NOT EXISTS idx_appointments_doctor ON appointments(doctor_id);
       CREATE INDEX IF NOT EXISTS idx_comm_logs_app_id ON appointment_communication_logs(appointment_id);
@@ -227,6 +248,35 @@ class HospitalSQLiteDatabase {
       }
     } catch (err) {
       console.warn("[SQLiteDB] Legacy JSON migration warning:", err);
+    }
+  }
+
+  private migrateLegacyMediaPathsIfNeeded() {
+    try {
+      const legacyReplacements: Array<[string, string]> = [
+        ["dr_mushtaq_khan_1786250783424", "/assets/aistudio/Dr_Khair_34ea5719.jpg"],
+        ["dr_rashid_khan_1786250799156", "/assets/aistudio/Dr_Rashid_Khan_6aa57a7f.jpg"],
+        ["dr_farha_deeba_1786250814040", "/assets/aistudio/Dr_Lady_dr_Khair_4d57e5f5.jpg"],
+      ];
+      for (const [needle, nextUrl] of legacyReplacements) {
+        this.db
+          .prepare("UPDATE doctors SET image = ? WHERE image LIKE ?")
+          .run(nextUrl, `%${needle}%`);
+      }
+
+      const biz = this.getSetting<any>("business_settings");
+      if (
+        biz &&
+        typeof biz.directorPhotoUrl === "string" &&
+        biz.directorPhotoUrl.includes("dr_mushtaq_khan_1786250783424")
+      ) {
+        this.upsertSetting("business_settings", {
+          ...biz,
+          directorPhotoUrl: "/assets/aistudio/Dr_Khair_34ea5719.jpg",
+        });
+      }
+    } catch (err) {
+      console.warn("[SQLiteDB] Legacy media migration note:", err);
     }
   }
 
@@ -688,6 +738,47 @@ class HospitalSQLiteDatabase {
       if (data.flashAnnouncement) {
         this.upsertSetting("flash_announcement", data.flashAnnouncement);
       }
+      if (Array.isArray(data.sliderSettings)) {
+        this.replaceHeroBannersInternal(data.sliderSettings);
+      }
+    });
+  }
+
+  private replaceHeroBannersInternal(slides: any[]) {
+    this.db.prepare("DELETE FROM hero_banners").run();
+    const stmt = this.db.prepare(
+      `INSERT INTO hero_banners (
+        id, tagline, title, highlight_text, hindi_slogan, description,
+        bg_image, badge, left_list, right_list, service_box,
+        accent_color, is_active, card_bg_class, sort_order
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+    slides.forEach((s, idx) => {
+      if (!s || !s.id) return;
+      stmt.run(
+        String(s.id),
+        String(s.tagline || ""),
+        String(s.title || ""),
+        String(s.highlightText || ""),
+        String(s.hindiSlogan || ""),
+        String(s.description || ""),
+        String(s.bgImage || ""),
+        String(s.badge || ""),
+        JSON.stringify(Array.isArray(s.leftList) ? s.leftList : []),
+        JSON.stringify(Array.isArray(s.rightList) ? s.rightList : []),
+        JSON.stringify(Array.isArray(s.serviceBox) ? s.serviceBox : []),
+        String(s.accentColor || "from-blue-600 to-indigo-700"),
+        s.isActive === false ? 0 : 1,
+        String(s.cardBgClass || ""),
+        idx
+      );
+    });
+    this.upsertSetting("slider_settings", slides);
+  }
+
+  public replaceHeroBanners(slides: any[]) {
+    this.runInTransaction(() => {
+      this.replaceHeroBannersInternal(slides);
     });
   }
 
@@ -823,6 +914,35 @@ class HospitalSQLiteDatabase {
       adminNotes: f.admin_notes || "",
     }));
 
+    const heroBannerRows = this.db
+      .prepare("SELECT * FROM hero_banners ORDER BY sort_order ASC, rowid ASC")
+      .all() as any[];
+
+    const sliderSettings =
+      heroBannerRows.length > 0
+        ? heroBannerRows.map((b) => {
+            const leftList = this.safeJsonParse<string[]>(b.left_list, []);
+            const rightList = this.safeJsonParse<string[]>(b.right_list, []);
+            const serviceBox = this.safeJsonParse<string[]>(b.service_box, []);
+            return {
+              id: b.id,
+              tagline: b.tagline || "",
+              title: b.title || "",
+              ...(b.highlight_text ? { highlightText: b.highlight_text } : {}),
+              ...(b.hindi_slogan ? { hindiSlogan: b.hindi_slogan } : {}),
+              ...(b.description ? { description: b.description } : {}),
+              bgImage: b.bg_image || "",
+              badge: b.badge || "",
+              ...(leftList.length > 0 ? { leftList } : {}),
+              ...(rightList.length > 0 ? { rightList } : {}),
+              ...(serviceBox.length > 0 ? { serviceBox } : {}),
+              accentColor: b.accent_color || "from-blue-600 to-indigo-700",
+              isActive: Boolean(b.is_active),
+              ...(b.card_bg_class ? { cardBgClass: b.card_bg_class } : {}),
+            };
+          })
+        : this.getSetting<any[]>("slider_settings") || undefined;
+
     return {
       doctors,
       employees,
@@ -837,6 +957,7 @@ class HospitalSQLiteDatabase {
       businessSettings: this.getSetting("business_settings"),
       logoSettings: this.getSetting("logo_settings"),
       flashAnnouncement: this.getSetting("flash_announcement"),
+      sliderSettings,
     };
   }
 
@@ -854,6 +975,7 @@ class HospitalSQLiteDatabase {
       "gallery",
       "feedbacks",
       "hospital_settings",
+      "hero_banners",
     ];
     const counts: Record<string, number> = {};
     for (const t of tables) {

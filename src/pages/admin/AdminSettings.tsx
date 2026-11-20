@@ -1,25 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import { useHospital } from '../../context/HospitalContext';
-import { INITIAL_LOGO_SETTINGS } from '../../data/initialData';
+import { INITIAL_LOGO_SETTINGS, INITIAL_SLIDER_SETTINGS } from '../../data/initialData';
+import { SliderSetting } from '../../types';
 import {
   Building2, Sliders, Image as ImageIcon, Save,
   CheckCircle2, HeartPulse,
-  Phone, Mail, MapPin, Globe, Clock, Sparkles, Lock, ShieldCheck, RotateCcw
+  ShieldCheck, RotateCcw, Plus, Edit2, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, X
 } from 'lucide-react';
 import { FileUploadInput } from '../../components/FileUploadInput';
 import { HospitalBrandName } from '../../components/HospitalBrandName';
 
+const BANNER_THEME_PRESETS = [
+  {
+    label: 'Emerald Royal',
+    value: 'bg-gradient-to-br from-[#022c22] via-[#064e3b] to-[#0f172a] text-white border-emerald-500/30',
+  },
+  {
+    label: 'Ocean Cyan',
+    value: 'bg-gradient-to-br from-[#0c4a6e] via-[#0e7490] to-[#0f172a] text-white border-cyan-500/30',
+  },
+  {
+    label: 'Deep Navy Indigo',
+    value: 'bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0c4a6e] text-white border-blue-400/30',
+  },
+  {
+    label: 'Violet Teal',
+    value: 'bg-gradient-to-br from-[#2c1654] via-[#1b357a] to-[#00b4d8] text-white border-blue-400/30',
+  },
+];
+
 export const AdminSettings: React.FC = () => {
   const {
     businessSettings, updateBusinessSettings,
-    sliderSettings,
+    sliderSettings, addSlider, updateSlider, deleteSlider, toggleSliderStatus, reorderSliders,
     logoSettings, updateLogoSettings
   } = useHospital();
 
   const [activeSubTab, setActiveSubTab] = useState<'business' | 'slider' | 'logo'>('business');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-
+  // Banner Add/Edit Modal State
+  const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
+  const [editingBanner, setEditingBanner] = useState<SliderSetting | null>(null);
+  const [bannerForm, setBannerForm] = useState({
+    bgImage: '',
+    badge: 'Hospital Highlight',
+    tagline: 'Khair Hospital, Basti',
+    title: 'KHAIR HOSPITAL',
+    highlightText: '',
+    hindiSlogan: '',
+    description: '',
+    leftListText: '',
+    rightListText: '',
+    serviceBoxText: '',
+    cardBgClass: BANNER_THEME_PRESETS[0].value,
+    isActive: true,
+  });
 
   // Business Form State
   const [bizForm, setBizForm] = useState({ ...businessSettings });
@@ -61,6 +97,89 @@ export const AdminSettings: React.FC = () => {
     showNotification('Logo and brand settings updated successfully!');
   };
 
+  // Banner Modal Helpers
+  const openAddBannerModal = () => {
+    setEditingBanner(null);
+    setBannerForm({
+      bgImage: '',
+      badge: 'Hospital Services',
+      tagline: 'Excellence in Healthcare • Basti',
+      title: 'KHAIR HOSPITAL',
+      highlightText: 'Compassionate Medical & Eye Care',
+      hindiSlogan: '',
+      description: 'Delivering quality healthcare, diagnostics, and specialist consultations.',
+      leftListText: '',
+      rightListText: '',
+      serviceBoxText: '',
+      cardBgClass: BANNER_THEME_PRESETS[0].value,
+      isActive: true,
+    });
+    setIsBannerModalOpen(true);
+  };
+
+  const openEditBannerModal = (slide: SliderSetting) => {
+    setEditingBanner(slide);
+    setBannerForm({
+      bgImage: slide.bgImage || '',
+      badge: slide.badge || '',
+      tagline: slide.tagline || '',
+      title: slide.title || '',
+      highlightText: slide.highlightText || '',
+      hindiSlogan: slide.hindiSlogan || '',
+      description: slide.description || '',
+      leftListText: (slide.leftList || []).join('\n'),
+      rightListText: (slide.rightList || []).join('\n'),
+      serviceBoxText: (slide.serviceBox || []).join(', '),
+      cardBgClass: slide.cardBgClass || BANNER_THEME_PRESETS[0].value,
+      isActive: slide.isActive !== false,
+    });
+    setIsBannerModalOpen(true);
+  };
+
+  const handleSaveBanner = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bannerForm.bgImage.trim()) return;
+
+    const leftList = bannerForm.leftListText.split('\n').map(s => s.trim()).filter(Boolean);
+    const rightList = bannerForm.rightListText.split('\n').map(s => s.trim()).filter(Boolean);
+    const serviceBox = bannerForm.serviceBoxText.split(',').map(s => s.trim()).filter(Boolean);
+
+    const payload: Omit<SliderSetting, 'id'> = {
+      bgImage: bannerForm.bgImage.trim(),
+      badge: bannerForm.badge.trim() || 'Hospital Banner',
+      tagline: bannerForm.tagline.trim() || 'Khair Hospital, Basti',
+      title: bannerForm.title.trim() || 'KHAIR HOSPITAL',
+      highlightText: bannerForm.highlightText.trim() || undefined,
+      hindiSlogan: bannerForm.hindiSlogan.trim() || undefined,
+      description: bannerForm.description.trim() || undefined,
+      leftList: leftList.length > 0 ? leftList : undefined,
+      rightList: rightList.length > 0 ? rightList : undefined,
+      serviceBox: serviceBox.length > 0 ? serviceBox : undefined,
+      accentColor: 'from-emerald-600 to-teal-700',
+      isActive: bannerForm.isActive,
+      cardBgClass: bannerForm.cardBgClass,
+    };
+
+    if (editingBanner) {
+      updateSlider(editingBanner.id, payload);
+      showNotification('Hero banner updated and synced across devices!');
+    } else {
+      addSlider(payload);
+      showNotification('New hero banner added and synced across devices!');
+    }
+    setIsBannerModalOpen(false);
+  };
+
+  const handleMoveBanner = (idx: number, direction: -1 | 1) => {
+    const target = idx + direction;
+    if (target < 0 || target >= sliderSettings.length) return;
+    const nextOrder = [...sliderSettings];
+    const [moved] = nextOrder.splice(idx, 1);
+    nextOrder.splice(target, 0, moved);
+    reorderSliders(nextOrder);
+    showNotification('Banner display order updated!');
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -95,10 +214,7 @@ export const AdminSettings: React.FC = () => {
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>Hero Sliders</span>
-            <span className="bg-amber-400 text-slate-950 text-[10px] font-extrabold px-1.5 py-0.5 rounded-xs ml-1 flex items-center gap-1">
-              <Lock className="w-2.5 h-2.5" /> Static
-            </span>
+            <span>Hero Sliders ({sliderSettings.length})</span>
           </button>
           <button
             onClick={() => setActiveSubTab('logo')}
@@ -387,174 +503,367 @@ export const AdminSettings: React.FC = () => {
         </form>
       )}
 
-      {/* TAB 2: HERO SLIDER SETTINGS (LOCKED IN STATIC MODE TILL NEXT COMMAND) */}
+      {/* TAB 2: HERO SLIDER SETTINGS (DYNAMIC ADMIN MANAGEMENT) */}
       {activeSubTab === 'slider' && (
         <div className="space-y-6">
-          {/* Static Mode Information Alert */}
-          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xs shadow-xs space-y-2">
-            <div className="flex items-center gap-2 text-amber-950 font-bold text-sm">
-              <Lock className="w-4 h-4 text-amber-700 shrink-0" />
-              <span>Static Banners Active & Provision for Changing Banners Inactive (Till Next Command)</span>
-            </div>
-            <p className="text-xs text-amber-900 leading-relaxed">
-              As commanded, all 4 hero banners presently uploaded have been made permanent static banners. The provision for uploading new banners, editing titles/slogans/images, reordering, deleting, or toggling visibility has been made inactive until the next command.
-            </p>
-          </div>
-
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-5 rounded-xs border border-slate-200 shadow-xs">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-serif font-bold text-base text-slate-900">Hero Slider Banners</h3>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-emerald-700" /> 4 Static Banners Active
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
-                  Changing Inactive
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300">
+                  {sliderSettings.filter(s => s.isActive !== false).length} Active / {sliderSettings.length} Total
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                The 4 hospital banners below are permanently loaded on the homepage in static presentation mode.
+                Upload custom banner photos, edit headlines/details, reorder slides, or toggle visibility on the homepage.
               </p>
             </div>
 
-            <button
-              disabled
-              className="bg-slate-100 text-slate-400 font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xs border border-slate-300 shadow-none cursor-not-allowed flex items-center gap-1.5 shrink-0"
-              title="Banner addition is inactive till next command"
-            >
-              <Lock className="w-4 h-4 text-slate-400" /> Add Banner (Inactive)
-            </button>
-          </div>
-
-          {/* Static Slider Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {sliderSettings.map((slide, idx) => (
-              <div
-                key={slide.id}
-                className="bg-white rounded-xs border border-slate-300 transition shadow-xs overflow-hidden flex flex-col justify-between"
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  reorderSliders(INITIAL_SLIDER_SETTINGS);
+                  showNotification('Default 3 hospital banners restored!');
+                }}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider px-3.5 py-2.5 rounded-xs border border-slate-300 transition cursor-pointer flex items-center gap-1.5"
               >
-                {/* Banner Header & Locked Status */}
-                <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-emerald-900 text-white font-bold text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded-xs">
-                      Static Banner #{idx + 1}
-                    </span>
-                    <span className="text-xs font-bold text-slate-700 truncate max-w-[180px]">
-                      {slide.title}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <span className="px-2.5 py-1 rounded-xs text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-800 text-white border border-emerald-900 shadow-2xs">
-                      <Lock className="w-3 h-3 text-amber-300" /> Active (Static)
-                    </span>
-                  </div>
-                </div>
-
-                {/* Banner Image Preview - 100% Clear & Sharp */}
-                <div className="relative h-48 bg-slate-900 overflow-hidden border-b border-slate-200">
-                  <img
-                    src={slide.bgImage}
-                    alt={slide.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2 right-2 bg-slate-900/85 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-xs flex items-center gap-1 border border-white/20">
-                    <Lock className="w-2.5 h-2.5 text-amber-400" />
-                    <span>{slide.badge}</span>
-                  </div>
-                </div>
-
-                {/* Banner Info Strip */}
-                <div className="p-3 bg-slate-900 text-white space-y-1">
-                  <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest block">
-                    {slide.tagline}
-                  </span>
-                  <h4 className="font-serif font-bold text-white text-sm truncate">
-                    {slide.title}
-                  </h4>
-                  {slide.highlightText && (
-                    <p className="text-xs text-amber-300 font-semibold truncate">
-                      {slide.highlightText}
-                    </p>
-                  )}
-                </div>
-
-                {/* Static Banner Notice replacing Upload Control */}
-                <div className="p-3.5 bg-slate-50 border-t border-b border-slate-200 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 text-slate-700 font-medium">
-                    <Lock className="w-4 h-4 text-amber-700 shrink-0" />
-                    <span>Image locked as static: <span className="font-semibold text-slate-900">Static Banner #{idx + 1}</span></span>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-xs bg-amber-100 text-amber-900 border border-amber-300">
-                    Upload Inactive
-                  </span>
-                </div>
-
-                {/* Details Summary */}
-                <div className="p-4 space-y-2 text-xs flex-1 bg-white">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Badge Text</span>
-                    <span className="font-bold text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-xs border border-emerald-200 text-[11px]">
-                      {slide.badge}
-                    </span>
-                  </div>
-
-                  {slide.hindiSlogan && (
-                    <div className="p-2 bg-emerald-50/70 border-l-2 border-emerald-600 rounded-r-xs text-emerald-950 font-serif text-[11px] italic">
-                      "{slide.hindiSlogan}"
-                    </div>
-                  )}
-
-                  {slide.description && (
-                    <p className="text-slate-600 line-clamp-2 text-[11px] leading-relaxed">
-                      {slide.description}
-                    </p>
-                  )}
-
-                  {slide.leftList && slide.rightList && (
-                    <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px] text-slate-700 font-medium">
-                      {slide.leftList.slice(0, 2).map((item, i) => (
-                        <div key={i} className="truncate">• {item}</div>
-                      ))}
-                      {slide.rightList.slice(0, 2).map((item, i) => (
-                        <div key={i} className="truncate">• {item}</div>
-                      ))}
-                    </div>
-                  )}
-
-                  {slide.serviceBox && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {slide.serviceBox.map((srv, i) => (
-                        <span key={i} className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-xs font-semibold text-slate-700">
-                          {srv}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Card Actions Footer - Made Inactive */}
-                <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between">
-                  <button
-                    disabled
-                    className="bg-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider px-3 py-1.5 rounded-xs border border-slate-300 cursor-not-allowed flex items-center gap-1.5"
-                    title="Banner editing is inactive till next command"
-                  >
-                    <Lock className="w-3.5 h-3.5 text-slate-400" /> Edit Details (Inactive)
-                  </button>
-
-                  <button
-                    disabled
-                    className="text-slate-400 p-1.5 rounded-xs cursor-not-allowed flex items-center gap-1 text-xs font-bold"
-                    title="Banner deletion is inactive till next command"
-                  >
-                    <Lock className="w-3.5 h-3.5 text-slate-400" /> Delete (Inactive)
-                  </button>
-                </div>
-              </div>
-            ))}
+                <RotateCcw className="w-3.5 h-3.5 text-emerald-800" /> Restore Default Banners
+              </button>
+              <button
+                type="button"
+                onClick={openAddBannerModal}
+                className="bg-emerald-900 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xs shadow-xs transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" /> Add New Banner
+              </button>
+            </div>
           </div>
 
+          {/* Dynamic Slider Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {sliderSettings.map((slide, idx) => {
+              const active = slide.isActive !== false;
+              return (
+                <div
+                  key={slide.id}
+                  className={`bg-white rounded-xs border transition shadow-xs overflow-hidden flex flex-col justify-between ${
+                    active ? 'border-slate-300' : 'border-slate-200 opacity-75'
+                  }`}
+                >
+                  {/* Banner Header & Controls */}
+                  <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="bg-emerald-900 text-white font-bold text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded-xs shrink-0">
+                        Banner #{idx + 1}
+                      </span>
+                      <span className="text-xs font-bold text-slate-700 truncate">
+                        {slide.title}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveBanner(idx, -1)}
+                        disabled={idx === 0}
+                        className="p-1.5 rounded-xs border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                        title="Move Earlier"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveBanner(idx, 1)}
+                        disabled={idx === sliderSettings.length - 1}
+                        className="p-1.5 rounded-xs border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                        title="Move Later"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          toggleSliderStatus(slide.id);
+                          showNotification(`Banner #${idx + 1} ${active ? 'hidden from' : 'shown on'} homepage.`);
+                        }}
+                        className={`px-2.5 py-1 rounded-xs text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border cursor-pointer transition ${
+                          active
+                            ? 'bg-emerald-800 hover:bg-emerald-900 text-white border-emerald-900'
+                            : 'bg-slate-200 hover:bg-slate-300 text-slate-700 border-slate-300'
+                        }`}
+                        title={active ? 'Click to Hide Banner' : 'Click to Show Banner'}
+                      >
+                        {active ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                        <span>{active ? 'Active' : 'Hidden'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Banner Image Preview */}
+                  <div className="relative aspect-[2/1] bg-white overflow-hidden border-b border-slate-200">
+                    <img
+                      src={slide.bgImage}
+                      alt={slide.title}
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute top-2 right-2 bg-slate-900/85 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-xs border border-white/20">
+                      <span>{slide.badge}</span>
+                    </div>
+                  </div>
+
+                  {/* Banner Info Strip */}
+                  <div className="p-3 bg-slate-900 text-white space-y-1">
+                    <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest block">
+                      {slide.tagline}
+                    </span>
+                    <h4 className="font-serif font-bold text-white text-sm truncate">
+                      {slide.title}
+                    </h4>
+                    {slide.highlightText && (
+                      <p className="text-xs text-amber-300 font-semibold truncate">
+                        {slide.highlightText}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Details Summary */}
+                  <div className="p-4 space-y-2 text-xs flex-1 bg-white">
+                    {slide.hindiSlogan && (
+                      <div className="p-2 bg-emerald-50/70 border-l-2 border-emerald-600 rounded-r-xs text-emerald-950 font-serif text-[11px] italic">
+                        "{slide.hindiSlogan}"
+                      </div>
+                    )}
+
+                    {slide.description && (
+                      <p className="text-slate-600 line-clamp-2 text-[11px] leading-relaxed">
+                        {slide.description}
+                      </p>
+                    )}
+
+                    {slide.leftList && slide.rightList && (
+                      <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px] text-slate-700 font-medium">
+                        {slide.leftList.slice(0, 2).map((item, i) => (
+                          <div key={i} className="truncate">• {item}</div>
+                        ))}
+                        {slide.rightList.slice(0, 2).map((item, i) => (
+                          <div key={i} className="truncate">• {item}</div>
+                        ))}
+                      </div>
+                    )}
+
+                    {slide.serviceBox && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {slide.serviceBox.map((srv, i) => (
+                          <span key={i} className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-xs font-semibold text-slate-700">
+                            {srv}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Actions Footer */}
+                  <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => openEditBannerModal(slide)}
+                      className="bg-emerald-900 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" /> Edit Banner & Photo
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={sliderSettings.length <= 1}
+                      onClick={() => {
+                        deleteSlider(slide.id);
+                        showNotification('Hero banner removed.');
+                      }}
+                      className="text-rose-700 hover:bg-rose-50 disabled:text-slate-400 disabled:hover:bg-transparent px-2.5 py-1.5 rounded-xs transition cursor-pointer disabled:cursor-not-allowed flex items-center gap-1 text-xs font-bold"
+                      title={sliderSettings.length <= 1 ? 'At least 1 banner must remain active' : 'Delete Banner'}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Add / Edit Hero Banner Modal */}
+          {isBannerModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+              <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+                  <h3 className="font-serif font-bold text-lg text-slate-900">
+                    {editingBanner ? 'Edit Hero Banner & Photo' : 'Add New Hero Banner'}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setIsBannerModalOpen(false)}
+                    className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveBanner} className="space-y-4 text-xs sm:text-sm overflow-y-auto pr-1">
+                  <FileUploadInput
+                    label="Banner Image (Recommended 2:1 landscape JPG, PNG, WEBP or URL)"
+                    acceptTypes="image/*,.jpg,.jpeg,.png,.webp"
+                    value={bannerForm.bgImage}
+                    onChange={(val) => setBannerForm({ ...bannerForm, bgImage: val })}
+                    required
+                    helpText="Upload a wide banner graphic or paste an image URL."
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider text-xs mb-1">Headline / Title *</label>
+                      <input
+                        type="text"
+                        required
+                        value={bannerForm.title}
+                        onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })}
+                        className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider text-xs mb-1">Badge Tag *</label>
+                      <input
+                        type="text"
+                        required
+                        value={bannerForm.badge}
+                        onChange={(e) => setBannerForm({ ...bannerForm, badge: e.target.value })}
+                        className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider text-xs mb-1">Tagline</label>
+                      <input
+                        type="text"
+                        value={bannerForm.tagline}
+                        onChange={(e) => setBannerForm({ ...bannerForm, tagline: e.target.value })}
+                        className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider text-xs mb-1">Highlight Subtitle</label>
+                      <input
+                        type="text"
+                        value={bannerForm.highlightText}
+                        onChange={(e) => setBannerForm({ ...bannerForm, highlightText: e.target.value })}
+                        className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 uppercase tracking-wider text-xs mb-1">Hindi Slogan (Optional)</label>
+                    <input
+                      type="text"
+                      value={bannerForm.hindiSlogan}
+                      onChange={(e) => setBannerForm({ ...bannerForm, hindiSlogan: e.target.value })}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 uppercase tracking-wider text-xs mb-1">Description</label>
+                    <textarea
+                      rows={2}
+                      value={bannerForm.description}
+                      onChange={(e) => setBannerForm({ ...bannerForm, description: e.target.value })}
+                      className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider text-xs mb-1">Left Feature Bullets (1 per line)</label>
+                      <textarea
+                        rows={3}
+                        value={bannerForm.leftListText}
+                        onChange={(e) => setBannerForm({ ...bannerForm, leftListText: e.target.value })}
+                        placeholder="OPD & IPD Services&#10;Laboratory"
+                        className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider text-xs mb-1">Right Feature Bullets (1 per line)</label>
+                      <textarea
+                        rows={3}
+                        value={bannerForm.rightListText}
+                        onChange={(e) => setBannerForm({ ...bannerForm, rightListText: e.target.value })}
+                        placeholder="24x7 Pharmacy&#10;Eye Care & Cataract Surgery"
+                        className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider text-xs mb-1">Core Service Tags (comma-separated)</label>
+                      <input
+                        type="text"
+                        value={bannerForm.serviceBoxText}
+                        onChange={(e) => setBannerForm({ ...bannerForm, serviceBoxText: e.target.value })}
+                        placeholder="OPD Services, IPD Services, Laboratory, Pharmacy"
+                        className="w-full border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 uppercase tracking-wider text-xs mb-1">Details Panel Color Theme</label>
+                      <select
+                        value={bannerForm.cardBgClass}
+                        onChange={(e) => setBannerForm({ ...bannerForm, cardBgClass: e.target.value })}
+                        className="w-full border border-slate-300 rounded-xl p-2.5 bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
+                      >
+                        {BANNER_THEME_PRESETS.map((preset) => (
+                          <option key={preset.label} value={preset.value}>{preset.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      id="banner-active-toggle"
+                      type="checkbox"
+                      checked={bannerForm.isActive}
+                      onChange={(e) => setBannerForm({ ...bannerForm, isActive: e.target.checked })}
+                      className="w-4 h-4 accent-emerald-800 cursor-pointer"
+                    />
+                    <label htmlFor="banner-active-toggle" className="text-xs font-bold text-slate-800 cursor-pointer">
+                      Show this banner on the live website
+                    </label>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setIsBannerModalOpen(false)}
+                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-semibold hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!bannerForm.bgImage.trim()}
+                      className="bg-emerald-900 hover:bg-emerald-800 disabled:opacity-50 text-white font-bold px-5 py-2.5 rounded-xl cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Save className="w-4 h-4" />
+                      {editingBanner ? 'Save Banner Changes' : 'Publish Banner'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

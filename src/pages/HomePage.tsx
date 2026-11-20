@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useHospital } from '../context/HospitalContext';
 import { HeroSlider } from '../components/HeroSlider';
-import drMushtaqImg from '../assets/images/dr_mushtaq_khan_1786250783424.jpg';
-import { getFixedDoctorImage } from '../data/initialData';
+import { DR_MUSHTAQ_PHOTO, getFixedDoctorImage } from '../data/initialData';
 import {
   Calendar, Stethoscope, HeartPulse, Award,
   Users, Activity, CheckCircle2, Clock, MapPin, Phone,
@@ -239,7 +238,12 @@ export const HomePage: React.FC = () => {
               <div className="shrink-0 flex items-center gap-4">
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full p-1 bg-white border-[5px] border-[#5a2196] shadow-md overflow-hidden shrink-0">
                   <img
-                    src={businessSettings.directorPhotoUrl || drMushtaqImg}
+                    src={
+                      businessSettings.directorPhotoUrl &&
+                      !businessSettings.directorPhotoUrl.includes('dr_mushtaq_khan_1786250783424')
+                        ? businessSettings.directorPhotoUrl
+                        : DR_MUSHTAQ_PHOTO
+                    }
                     alt={businessSettings.directorName || "Director"}
                     className="w-full h-full object-cover object-top rounded-full"
                   />

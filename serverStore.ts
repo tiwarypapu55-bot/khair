@@ -405,6 +405,14 @@ class ServerStore {
         modified = true;
         break;
 
+      case "slider_settings:update":
+        if (Array.isArray(payload)) {
+          this.data.sliderSettings = payload;
+          hospitalDb.replaceHeroBanners(payload);
+          modified = true;
+        }
+        break;
+
       case "full:replace":
         if (payload && typeof payload === "object") {
           hospitalDb.replaceAllData(payload);

@@ -146,14 +146,16 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const clearSyncNotice = () => setSyncNotice(null);
 
   const [doctors, setDoctors] = useState<Doctor[]>(() => {
-    const saved = localStorage.getItem('khair_doctors_v4');
+    const saved = localStorage.getItem('khair_doctors_v5') || localStorage.getItem('khair_doctors_v4');
     if (saved) {
       try {
         const parsed: Doctor[] = JSON.parse(saved);
-        return parsed.map(d => ({
-          ...d,
-          image: getFixedDoctorImage(d.id, d.image)
-        }));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(d => ({
+            ...d,
+            image: getFixedDoctorImage(d.id || d.name, d.image)
+          }));
+        }
       } catch (e) {
         console.warn('Failed to parse doctors:', e);
       }
@@ -235,9 +237,15 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        const rawDirPhoto = parsed.directorPhotoUrl;
+        const cleanDirPhoto =
+          !rawDirPhoto || String(rawDirPhoto).includes('dr_mushtaq_khan_1786250783424')
+            ? INITIAL_BUSINESS_SETTINGS.directorPhotoUrl
+            : rawDirPhoto;
         return {
           ...INITIAL_BUSINESS_SETTINGS,
           ...parsed,
+          directorPhotoUrl: cleanDirPhoto,
           googleMapsUrl: parsed.googleMapsUrl || INITIAL_BUSINESS_SETTINGS.googleMapsUrl
         };
       } catch (e) {
@@ -247,8 +255,19 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return INITIAL_BUSINESS_SETTINGS;
   });
 
-  // Hero Banners (Fixed as static banners presently uploaded)
-  const [sliderSettings, setSliderSettings] = useState<SliderSetting[]>(STATIC_HERO_BANNERS);
+  // Hero Banners (Dynamic - configurable by Admin & synced across devices)
+  const [sliderSettings, setSliderSettings] = useState<SliderSetting[]>(() => {
+    const saved = localStorage.getItem('khair_slider_settings_v6');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        console.warn('Failed to parse slider settings:', e);
+      }
+    }
+    return INITIAL_SLIDER_SETTINGS;
+  });
 
   const [logoSettings, setLogoSettings] = useState<LogoSettings>(() => {
     const saved = localStorage.getItem('khair_logo_settings_v3') || localStorage.getItem('khair_logo_settings_v2');
@@ -354,7 +373,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         case 'doctor:add':
           if (payload?.id) {
             setDoctors(prev => prev.some(d => d.id === payload.id) ? prev : [
-              { ...payload, image: getFixedDoctorImage(payload.id, payload.image) },
+              { ...payload, image: getFixedDoctorImage(payload.id || payload.name, payload.image) },
               ...prev
             ]);
             setSyncNotice(`Dr. ${payload.name || 'Doctor'} added via live sync`);
@@ -365,8 +384,9 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             setDoctors(prev => prev.map(d => d.id === payload.id ? {
               ...d,
               ...payload,
-              image: getFixedDoctorImage(d.id, d.image) // Fixed static photo locked
+              image: getFixedDoctorImage(d.id || d.name, payload.image ?? d.image)
             } : d));
+            setSyncNotice(`Doctor profile "${payload.name || ''}" updated across devices`);
           }
           break;
         case 'doctor:delete':
@@ -521,10 +541,16 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         case 'flash_announcement:update':
           if (payload) setFlashAnnouncement(prev => ({ ...prev, ...payload }));
           break;
+        case 'slider_settings:update':
+          if (Array.isArray(payload)) {
+            setSliderSettings(payload);
+            setSyncNotice('Hero banners updated across devices');
+          }
+          break;
         case 'sync:init':
           if (payload) {
             if (Array.isArray(payload.doctors) && payload.doctors.length > 0) {
-              setDoctors(payload.doctors.map((d: any) => ({ ...d, image: getFixedDoctorImage(d.id, d.image) })));
+              setDoctors(payload.doctors.map((d: any) => ({ ...d, image: getFixedDoctorImage(d.id || d.name, d.image) })));
             }
             if (Array.isArray(payload.departments) && payload.departments.length > 0) setDepartments(payload.departments);
             if (Array.isArray(payload.facilities) && payload.facilities.length > 0) setFacilities(payload.facilities);
@@ -538,6 +564,9 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             if (payload.businessSettings) setBusinessSettings(payload.businessSettings);
             if (payload.logoSettings) setLogoSettings(payload.logoSettings);
             if (payload.flashAnnouncement) setFlashAnnouncement(payload.flashAnnouncement);
+            if (Array.isArray(payload.sliderSettings) && payload.sliderSettings.length > 0) {
+              setSliderSettings(payload.sliderSettings);
+            }
           }
           break;
       }
@@ -555,7 +584,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         if (hasData) {
           if (data.doctors && data.doctors.length > 0) {
-            setDoctors(data.doctors.map((d: any) => ({ ...d, image: getFixedDoctorImage(d.id, d.image) })));
+            setDoctors(data.doctors.map((d: any) => ({ ...d, image: getFixedDoctorImage(d.id || d.name, d.image) })));
           }
           if (data.departments && data.departments.length > 0) setDepartments(data.departments);
           if (data.facilities && data.facilities.length > 0) setFacilities(data.facilities);
@@ -569,6 +598,12 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (data.businessSettings) setBusinessSettings(data.businessSettings);
           if (data.logoSettings) setLogoSettings(data.logoSettings);
           if (data.flashAnnouncement) setFlashAnnouncement(data.flashAnnouncement);
+          if (Array.isArray(data.sliderSettings) && data.sliderSettings.length > 0) {
+            setSliderSettings(data.sliderSettings);
+          } else {
+            // Ensure hero_banners table is seeded if missing on existing server DB
+            serverSync.bootstrapServer({ sliderSettings: INITIAL_SLIDER_SETTINGS });
+          }
         } else {
           // Bootstrap server SQLite database with initial data
           serverSync.bootstrapServer({
@@ -585,6 +620,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             businessSettings: INITIAL_BUSINESS_SETTINGS,
             logoSettings: INITIAL_LOGO_SETTINGS,
             flashAnnouncement: INITIAL_FLASH_ANNOUNCEMENT,
+            sliderSettings: INITIAL_SLIDER_SETTINGS,
           });
         }
       }
@@ -603,7 +639,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (res && res.data) {
       const { data } = res;
       if (data.doctors && data.doctors.length > 0) {
-        setDoctors(data.doctors.map((d: any) => ({ ...d, image: getFixedDoctorImage(d.id, d.image) })));
+        setDoctors(data.doctors.map((d: any) => ({ ...d, image: getFixedDoctorImage(d.id || d.name, d.image) })));
       }
       if (data.departments && data.departments.length > 0) setDepartments(data.departments);
       if (data.facilities && data.facilities.length > 0) setFacilities(data.facilities);
@@ -617,6 +653,9 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (data.businessSettings) setBusinessSettings(data.businessSettings);
       if (data.logoSettings) setLogoSettings(data.logoSettings);
       if (data.flashAnnouncement) setFlashAnnouncement(data.flashAnnouncement);
+      if (Array.isArray(data.sliderSettings) && data.sliderSettings.length > 0) {
+        setSliderSettings(data.sliderSettings);
+      }
       setSyncNotice('Full synchronization with server complete');
     }
   };
@@ -742,8 +781,13 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             await saveSettingToSupabase('logo_settings', INITIAL_LOGO_SETTINGS);
           }
 
-          // Hero Banners are static: preserve STATIC_HERO_BANNERS
-          setSliderSettings(STATIC_HERO_BANNERS);
+          // Hero Banners (Dynamic)
+          const sbSliders = await fetchSettingFromSupabase<SliderSetting[]>('slider_settings');
+          if (Array.isArray(sbSliders) && sbSliders.length > 0) {
+            setSliderSettings(sbSliders);
+          } else {
+            await saveSettingToSupabase('slider_settings', INITIAL_SLIDER_SETTINGS);
+          }
 
           const sbFlash = await fetchSettingFromSupabase<FlashAnnouncement>('flash_announcement');
           if (sbFlash) {
@@ -803,7 +847,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Backup sync to local storage
   useEffect(() => {
     try {
-      localStorage.setItem('khair_doctors_v4', JSON.stringify(doctors));
+      localStorage.setItem('khair_doctors_v5', JSON.stringify(doctors));
     } catch (e) {
       console.warn('Failed to save doctors to localStorage:', e);
     }
@@ -891,7 +935,7 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     try {
-      localStorage.setItem('khair_slider_settings_v5', JSON.stringify(sliderSettings));
+      localStorage.setItem('khair_slider_settings_v6', JSON.stringify(sliderSettings));
     } catch (e) {
       console.warn('Failed to save slider settings to localStorage:', e);
     }
@@ -923,25 +967,52 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
-  // Slider Handlers - Inactive till next command (Static Banners Mode Active)
-  const addSlider = (_slide: Omit<SliderSetting, 'id'>) => {
-    console.warn('Banner creation is inactive: static banners are locked till next command.');
+  // Dynamic Slider Handlers (Configurable by Admin & Synced across devices)
+  const syncSliders = (updated: SliderSetting[]) => {
+    saveSettingToSupabase('slider_settings', updated);
+    serverSync.sendMutation('slider_settings:update', updated);
   };
 
-  const updateSlider = (_id: string, _slideData: Partial<SliderSetting>) => {
-    console.warn('Banner editing is inactive: static banners are locked till next command.');
+  const addSlider = (slide: Omit<SliderSetting, 'id'>) => {
+    const newSlide: SliderSetting = {
+      ...slide,
+      id: `slide-${Date.now()}`,
+      isActive: slide.isActive ?? true,
+    };
+    setSliderSettings(prev => {
+      const updated = [...prev, newSlide];
+      syncSliders(updated);
+      return updated;
+    });
   };
 
-  const deleteSlider = (_id: string) => {
-    console.warn('Banner deletion is inactive: static banners are locked till next command.');
+  const updateSlider = (id: string, slideData: Partial<SliderSetting>) => {
+    setSliderSettings(prev => {
+      const updated = prev.map(s => (s.id === id ? { ...s, ...slideData } : s));
+      syncSliders(updated);
+      return updated;
+    });
   };
 
-  const toggleSliderStatus = (_id: string) => {
-    console.warn('Banner visibility toggle is inactive: static banners are locked till next command.');
+  const deleteSlider = (id: string) => {
+    setSliderSettings(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      syncSliders(updated);
+      return updated;
+    });
   };
 
-  const reorderSliders = (_newOrder: SliderSetting[]) => {
-    console.warn('Banner reordering is inactive: static banners are locked till next command.');
+  const toggleSliderStatus = (id: string) => {
+    setSliderSettings(prev => {
+      const updated = prev.map(s => (s.id === id ? { ...s, isActive: !s.isActive } : s));
+      syncSliders(updated);
+      return updated;
+    });
+  };
+
+  const reorderSliders = (newOrder: SliderSetting[]) => {
+    setSliderSettings(newOrder);
+    syncSliders(newOrder);
   };
 
   // Logo Handlers
@@ -964,10 +1035,14 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
-  // Doctor CRUD
+  // Doctor CRUD (Dynamic Photo Support)
   const addDoctor = (doc: Omit<Doctor, 'id'>) => {
     const newId = `doc-${Date.now()}`;
-    const newDoc: Doctor = { ...doc, id: newId, image: getFixedDoctorImage(newId, doc.image) };
+    const newDoc: Doctor = {
+      ...doc,
+      id: newId,
+      image: getFixedDoctorImage(newId, doc.image)
+    };
     setDoctors(prev => [newDoc, ...prev]);
     saveDoctorToSupabase(newDoc);
     serverSync.sendMutation('doctor:add', newDoc);
@@ -976,10 +1051,11 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const updateDoctor = (id: string, docData: Partial<Doctor>) => {
     setDoctors(prev => prev.map(d => {
       if (d.id === id) {
+        const nextImage = docData.image !== undefined ? docData.image : d.image;
         const updated = {
           ...d,
           ...docData,
-          image: getFixedDoctorImage(d.id, d.image) // Fixed static photo locked
+          image: getFixedDoctorImage(d.id || d.name, nextImage)
         };
         saveDoctorToSupabase(updated);
         serverSync.sendMutation('doctor:update', updated);
@@ -1296,11 +1372,11 @@ export const HospitalProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isSupabaseConnected,
         syncState, forceSyncWithServer, syncNotice, clearSyncNotice,
         businessSettings, updateBusinessSettings,
-        sliderSettings, isBannerEditingInactive: true, addSlider, updateSlider, deleteSlider, toggleSliderStatus, reorderSliders,
+        sliderSettings, isBannerEditingInactive: false, addSlider, updateSlider, deleteSlider, toggleSliderStatus, reorderSliders,
         logoSettings, updateLogoSettings,
         flashAnnouncement, updateFlashAnnouncement,
         isFlashModalOpen, setIsFlashModalOpen,
-        addDoctor, updateDoctor, deleteDoctor, isDoctorPhotoEditingInactive: true,
+        addDoctor, updateDoctor, deleteDoctor, isDoctorPhotoEditingInactive: false,
         addDepartment, updateDepartment, deleteDepartment,
         addEmployee, updateEmployee, deleteEmployee,
         addGalleryItem, deleteGalleryItem,

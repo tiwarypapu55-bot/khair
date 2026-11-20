@@ -3,32 +3,44 @@ import {
   EventItem, FeedbackItem, Appointment, BusinessSettings, SliderSetting, LogoSettings, FlashAnnouncement 
 } from '../types';
 
-import bannerFacilities from '../assets/images/khair_banner_facilities_1786209223428.jpg';
-import bannerEyecare from '../assets/images/khair_banner_eyecare_1786209242082.jpg';
-import bannerWelcome from '../assets/images/khair_banner_welcome_1786209260002.jpg';
-import bannerSurgery from '../assets/images/khair_banner_surgery_1786252089141.jpg';
 import khairLogoImg from '../assets/images/khair_new_logo_1789555306483.jpg';
 
-import drMushtaqImg from '../assets/images/dr_mushtaq_khan_1786250783424.jpg';
-import drRashidImg from '../assets/images/dr_rashid_khan_1786250799156.jpg';
-import drFarhaImg from '../assets/images/dr_farha_deeba_1786250814040.jpg';
+export const DR_MUSHTAQ_PHOTO = '/assets/aistudio/Dr_Khair_34ea5719.jpg';
+export const DR_RASHID_PHOTO = '/assets/aistudio/Dr_Rashid_Khan_6aa57a7f.jpg';
+export const DR_FARHA_PHOTO = '/assets/aistudio/Dr_Lady_dr_Khair_4d57e5f5.jpg';
 
-// Fixed and static doctor images
+const isLegacyDoctorPlaceholder = (url?: string): boolean => {
+  if (!url) return true;
+  return (
+    url.includes('dr_mushtaq_khan_1786250783424') ||
+    url.includes('dr_rashid_khan_1786250799156') ||
+    url.includes('dr_farha_deeba_1786250814040')
+  );
+};
+
+// Default doctor images (used only when no custom admin-uploaded photo is set)
 export const STATIC_DOCTOR_IMAGES: Record<string, string> = {
-  'doc-1': drMushtaqImg,
-  'doc-2': drRashidImg,
-  'doc-3': drFarhaImg,
+  'doc-1': DR_MUSHTAQ_PHOTO,
+  'doc-2': DR_RASHID_PHOTO,
+  'doc-3': DR_FARHA_PHOTO,
 };
 
-export const getFixedDoctorImage = (idOrName: string, fallback?: string): string => {
+export const getDefaultDoctorImage = (idOrName: string): string => {
   const key = (idOrName || '').toLowerCase();
-  if (key === 'doc-1' || key.includes('mushtaq')) return drMushtaqImg;
-  if (key === 'doc-2' || key.includes('rashid')) return drRashidImg;
-  if (key === 'doc-3' || key.includes('farha')) return drFarhaImg;
-  return STATIC_DOCTOR_IMAGES[idOrName] || fallback || drMushtaqImg;
+  if (key === 'doc-1' || key.includes('mushtaq')) return DR_MUSHTAQ_PHOTO;
+  if (key === 'doc-2' || key.includes('rashid')) return DR_RASHID_PHOTO;
+  if (key === 'doc-3' || key.includes('farha')) return DR_FARHA_PHOTO;
+  return STATIC_DOCTOR_IMAGES[idOrName] || DR_MUSHTAQ_PHOTO;
 };
 
-export const IS_DOCTOR_PHOTO_EDITING_INACTIVE = true;
+export const getFixedDoctorImage = (idOrName: string, currentImage?: string): string => {
+  if (currentImage && currentImage.trim() !== '' && !isLegacyDoctorPlaceholder(currentImage)) {
+    return currentImage;
+  }
+  return getDefaultDoctorImage(idOrName);
+};
+
+export const IS_DOCTOR_PHOTO_EDITING_INACTIVE = false;
 
 export const INITIAL_DOCTORS: Doctor[] = [
   {
@@ -38,7 +50,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
     department: 'General Surgery',
     specialization: 'General Surgery',
     experience: '35 years',
-    image: drMushtaqImg,
+    image: DR_MUSHTAQ_PHOTO,
     opdSchedule: 'Mon - Sat: 10:00 AM - 02:00 PM, 05:00 PM - 08:00 PM',
     fee: 500,
     phone: '9628897004',
@@ -53,7 +65,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
     department: 'Laproscopic Surgery',
     specialization: 'General and Laproscopic Surgery',
     experience: '15 Yrs',
-    image: drRashidImg,
+    image: DR_RASHID_PHOTO,
     opdSchedule: 'Mon - Sat: 11:00 AM - 03:00 PM, 05:00 PM - 08:00 PM',
     fee: 200,
     phone: '9628897004',
@@ -68,7 +80,7 @@ export const INITIAL_DOCTORS: Doctor[] = [
     department: 'Ophthalmology',
     specialization: 'Ophthalmology',
     experience: '13 Yrs',
-    image: drFarhaImg,
+    image: DR_FARHA_PHOTO,
     opdSchedule: 'Mon - Sat: 09:30 AM - 02:00 PM, 04:30 PM - 07:30 PM',
     fee: 200,
     phone: '9628897004',
@@ -479,7 +491,7 @@ export const INITIAL_BUSINESS_SETTINGS: BusinessSettings = {
   ayushmanEnabled: true,
   directorName: 'Director',
   directorDesignation: 'Khair Hospital, Basti',
-  directorPhotoUrl: drMushtaqImg,
+  directorPhotoUrl: DR_MUSHTAQ_PHOTO,
   directorMessage: `At Khair Hospital, our mission is simple — to bring exelient Health Care System and light of vision to every life we touch. Since our inception, we have been dedicated to providing Advanced Multi-Speciality Treatment and Eye Care with compassion, precision, and trust.
 
 Guided by a commitment to excellence, our skilled specialists ensure that every patient receives personalized treatment in a caring and comfortable environment.
@@ -496,31 +508,20 @@ As the Director of Khair Hospital, I take immense pride in our team’s integrit
   ]
 };
 
-// 4 Presently uploaded banners fixed as permanent static banners
+// Default initial hero banners (dynamically manageable by Admin)
 export const STATIC_HERO_BANNERS: SliderSetting[] = [
   {
     id: 'slide-1',
-    tagline: 'Multi-Specialty & Trauma Care',
-    title: 'KHAIR HOSPITAL',
-    highlightText: 'Facilities & Services',
-    description: 'Comprehensive medical infrastructure featuring modern modular operation theatres, 24x7 casualty, and state-of-the-art diagnostic labs.',
-    bgImage: bannerFacilities,
-    badge: 'Facilities & Services',
-    leftList: [
-      'Modern Operation Theatres',
-      'Air Cooled Wards',
-      'Private Wards',
-      'Advanced Pathology & Lab'
-    ],
-    rightList: [
-      'Online Appointments',
-      'Health Check-Up Camps',
-      'Wheelchair Access & Patient Support',
-      'Clean & Comfort Waiting Zones'
-    ],
-    accentColor: 'from-amber-500 to-amber-600',
+    tagline: 'Trust & Excellence in Healthcare',
+    title: 'WELCOME TO KHAIR HOSPITAL',
+    highlightText: 'We Care About You',
+    hindiSlogan: 'आंखों की देखभाल, आपके विश्वास का नाम - खैर हॉस्पिटल',
+    description: 'Dedicated to delivering patient-centric medical and ophthalmic care with expert specialist consultations and modern hospital facilities in Basti.',
+    bgImage: '/assets/aistudio/Khair_Hospital_Banner_1_baebc7c6.png',
+    badge: 'We Care About You',
+    accentColor: 'from-blue-600 to-indigo-700',
     isActive: true,
-    cardBgClass: 'bg-gradient-to-br from-[#2c1654] via-[#1b357a] to-[#00b4d8] text-white border-blue-400/30'
+    cardBgClass: 'bg-gradient-to-br from-[#022c22] via-[#064e3b] to-[#0f172a] text-white border-emerald-500/30'
   },
   {
     id: 'slide-2',
@@ -528,8 +529,8 @@ export const STATIC_HERO_BANNERS: SliderSetting[] = [
     title: 'KHAIR HOSPITAL',
     highlightText: 'Compassionate Eye Care',
     description: '“Providing compassionate eye care and advanced treatments for a clearer, healthier vision.”',
-    bgImage: bannerEyecare,
-    badge: 'Our Core Services',
+    bgImage: '/assets/aistudio/Khair_Hospital_Banner_2_6d5c7dce.png',
+    badge: 'Our Services',
     serviceBox: [
       'OPD Services',
       'IPD Services',
@@ -538,49 +539,32 @@ export const STATIC_HERO_BANNERS: SliderSetting[] = [
     ],
     accentColor: 'from-emerald-600 to-teal-700',
     isActive: true,
-    cardBgClass: 'bg-gradient-to-br from-[#e8acac] via-[#d89f9f] to-[#cb8e8e] text-slate-950 border-[#c48585]'
+    cardBgClass: 'bg-gradient-to-br from-[#0c4a6e] via-[#0e7490] to-[#0f172a] text-white border-cyan-500/30'
   },
   {
     id: 'slide-3',
-    tagline: 'Trust & Excellence in Healthcare',
-    title: 'WELCOME TO KHAIR HOSPITAL',
-    highlightText: 'We Care About You',
-    hindiSlogan: 'आंखों की देखभाल, आपके विश्वास का नाम - खैर हॉस्पिटल',
-    description: 'Dedicated to delivering patient-centric medical treatment with expert doctor consultations and round-the-clock emergency care.',
-    bgImage: bannerWelcome,
-    badge: 'We Care About You',
-    accentColor: 'from-blue-600 to-indigo-700',
-    isActive: true,
-    cardBgClass: 'bg-gradient-to-br from-[#022c22] via-[#064e3b] to-[#0f172a] text-white border-emerald-500/30'
-  },
-  {
-    id: 'slide-4',
-    tagline: 'Advanced Laparoscopic & General Surgery',
-    title: 'KHAIR HOSPITAL',
-    highlightText: 'Ayushman Bharat Empaneled',
-    description: 'Providing advanced minimally invasive laparoscopic surgeries, trauma care, and Ayushman Bharat cash-less treatment options.',
-    bgImage: bannerSurgery,
-    badge: 'Surgical Excellence',
+    tagline: 'Quality Health Services Tailored Just for You',
+    title: 'THE CARE + YOU DESERVE',
+    highlightText: 'Our Services',
+    description: 'Comprehensive patient care, accurate diagnostic testing, 24x7 genuine pharmacy, and specialized eye care & cataract surgery under one roof.',
+    bgImage: '/assets/aistudio/Khair_Hospital_Banner_3_10ed69f9.png',
+    badge: 'The Care You Deserve',
     leftList: [
-      'Advanced Laparoscopic Surgery',
-      'Ayushman Bharat Cash-less',
-      '24x7 Emergency & Trauma',
-      'Modular Sterile OT'
+      'OPD & IPD Services – Comprehensive patient care',
+      'Laboratory – Accurate diagnostic testing'
     ],
     rightList: [
-      'Senior Consultant Surgeons',
-      'Minimal Pain & Faster Recovery',
-      'ICU & Post-Op Monitoring',
-      'Dedicated Nursing Staff'
+      'Pharmacy – 24*7 access to genuine medicines',
+      'Eye Care – Cataract surgery & specialized ophthalmic care'
     ],
     accentColor: 'from-purple-600 to-indigo-800',
     isActive: true,
-    cardBgClass: 'bg-gradient-to-br from-[#1e1b4b] via-[#1e3a8a] to-[#0f172a] text-white border-indigo-500/30'
+    cardBgClass: 'bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0c4a6e] text-white border-blue-400/30'
   }
 ];
 
 export const INITIAL_SLIDER_SETTINGS: SliderSetting[] = STATIC_HERO_BANNERS;
-export const ARE_BANNERS_STATIC = true;
+export const ARE_BANNERS_STATIC = false;
 
 export const INITIAL_LOGO_SETTINGS: LogoSettings = {
   headerLogoUrl: khairLogoImg,

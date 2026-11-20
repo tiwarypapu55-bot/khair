@@ -4,7 +4,7 @@ import {
   CheckCircle2, Calendar, Eye, Sparkles, HeartPulse, Building2 
 } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
-import { STATIC_HERO_BANNERS } from '../data/initialData';
+import { INITIAL_SLIDER_SETTINGS } from '../data/initialData';
 
 export const HeroSlider: React.FC = () => {
   const { setIsAppointmentModalOpen, setCurrentTab, sliderSettings, businessSettings } = useHospital();
@@ -13,8 +13,9 @@ export const HeroSlider: React.FC = () => {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  // Present uploaded banners as static banners
-  const slides = (sliderSettings && sliderSettings.length > 0) ? sliderSettings : STATIC_HERO_BANNERS;
+  // Dynamically use active banners configured by Admin
+  const activeSlides = (sliderSettings || []).filter(s => s.isActive !== false);
+  const slides = activeSlides.length > 0 ? activeSlides : INITIAL_SLIDER_SETTINGS;
 
   // Ensure currentSlide is within bounds if slider length changes
   useEffect(() => {
@@ -77,16 +78,17 @@ export const HeroSlider: React.FC = () => {
         onTouchEnd={handleTouchEnd}
       >
         {/* Active Banner Image Frame - 100% Full Width Edge-to-Edge */}
-        <div className="relative w-full min-h-[260px] sm:min-h-[420px] md:min-h-[520px] lg:min-h-[600px] flex items-center justify-center overflow-hidden bg-slate-900">
+        <div className="relative w-full aspect-[2/1] max-h-[680px] overflow-hidden bg-white">
           {slides.map((slide, idx) => (
             <img
               key={slide.id}
               src={slide.bgImage}
               alt={slide.title}
-              className={`w-full h-full object-cover object-center transition-opacity duration-700 ease-in-out ${
-                idx === currentSlide ? 'opacity-100 relative z-10' : 'opacity-0 absolute inset-0 z-0 pointer-events-none'
+              loading="eager"
+              decoding="async"
+              className={`absolute inset-0 w-full h-full object-contain object-center transition-opacity duration-700 ease-in-out ${
+                idx === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
               }`}
-              referrerPolicy="no-referrer"
             />
           ))}
         </div>
